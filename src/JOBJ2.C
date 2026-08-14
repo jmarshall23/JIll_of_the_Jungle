@@ -1138,7 +1138,7 @@ int msg_searock(int n, int msg, int z)
 int msg_eyes(int n, int msg, int z)
 {
     int x, y;
-    int shape = kindtable[obj_eyes] * 256;
+    int shape = kindtable[obj_eye] * 256;
     (void)z;
     if (msg == msg_draw) {
         drawshape(gamevp, shape, objs[n].x, objs[n].y);

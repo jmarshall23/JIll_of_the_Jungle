@@ -106,7 +106,7 @@ int doconfig(void)
         if (!musicflag) cf.musicflag0 = 0;
         if (!vocflag) cf.vocflag0 = 0;
     }
-
+#if 0 // jmarshall
     if (!configure) {
         host_console_clear();
         fputs("\r\n", stdout);
@@ -134,14 +134,13 @@ int doconfig(void)
         fputs("\r\n", stdout);
         fputs("  Press ENTER if this is correct\r\n", stdout);
         fputs("      or press 'C' to configure: ", stdout);
-#if 0 // jmarshall
+
         do {
             getkey();
             key = (word)toupper(key);
         } while (key != enter && key != 'C' && key != escape);
         if (key == 'C') configure = 1;
         if (key == escape) return 0;
-#endif
     }
 
     if (configure) {
@@ -211,7 +210,7 @@ int doconfig(void)
         fputs("       graphics are recommended.\r\n", stdout);
         if (!gr_config()) return 0;
     }
-
+#endif
     if (systime < 4000L) {
         vocflag = 0;
         cf.vocflag0 = 0;

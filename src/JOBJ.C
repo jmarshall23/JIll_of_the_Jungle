@@ -517,7 +517,7 @@ int msg_demon(int n, int msg, int z)
                 pointvect(0, n, &dx, &dy, 4);
                 objs[n].xd = (word)dx;
                 objs[n].yd = (word)dy;
-                shot = addobj(obj_enemyshot, objs[n].x, objs[n].y);
+                shot = addobj(obj_fireball, objs[n].x, objs[n].y);
                 objs[shot].xd = objs[n].xd;
                 objs[shot].yd = objs[n].yd;
                 if (rand() % 2 == 0) {
@@ -608,7 +608,7 @@ int msg_fireball(int n, int msg, int z)
 {
     if (msg == msg_draw) {
         drawshape(gamevp,
-                  kindtable[obj_enemyshot] * 256 + objs[n].counter / 2,
+                  kindtable[obj_fireball] * 256 + objs[n].counter / 2,
                   objs[n].x, objs[n].y);
     } else if (msg == msg_touch) {
         if (z == 0) {
@@ -843,14 +843,14 @@ int msg_falldoor(int n, int msg, int z)
 void initobjinfo(void)
 {
     static const char *const names[numobjkinds] = {
-        "PLAYER","APPLE","KNIFE","UNUSED3","BIGANT","UNUSED5","FLY","DEMON","FATSO",
+        "PLAYER","APPLE","KNIFE","KILLME","BIGANT","FLY","MACROTRIG","DEMON","BUNNY",
         "INCHWORM","ZAPPER","BOBSLUG","CHECKPT","PAUL","KEY","PAD","WISEMAN","ROMAN",
-        "ENEMYSHOT","CLOUD","TEXT6","TEXT8","FROG","TINY","DOOR","FALLDOOR","BRIDGER",
+        "FIREBALL","CLOUD","TEXT6","TEXT8","FROG","TINY","DOOR","FALLDOOR","BRIDGER",
         "SCORE","TOKEN","ANT","PHOENIX","FIRE","SWITCH","GEM","EXPLODE","BOULDER",
         "EXPL1","EXPL2","STALAG","SNAKE","SEAROCK","BOLL","MEGA","BAT","KNIGHT",
         "BEENEST","BEESWARM","CRAB","CROC","EPIC","SPINBLAD","SKULL","BUTTON","PAC",
         "JILLFISH","UNUSED55","JILLBIRD","JILLFROG","BUBBLE","JELLYFISH","BADFISH","ELEV",
-        "FIREBULLET","FISHBULLET","EYES","VINECLIMB","FLAG","TXTMSG","MAPDEMO"
+        "FIREBULLET","FISHBULLET","EYE","VINECLIMB","FLAG","MAPDEMO","ROMAN"
     };
     static const word recovered_xl[numobjkinds] = {
         16,12,10,0,24,16,0,32,8,16,32,24,16,24,16,16,16,20,16,16,6,8,14,
@@ -891,9 +891,12 @@ void initobjinfo(void)
     kindmsg[obj_player] = msg_player;
     kindmsg[obj_apple] = msg_apple;
     kindmsg[obj_knife] = msg_knife;
+    kindmsg[obj_killme] = msg_null;
     kindmsg[obj_bigant] = msg_bigant;
     kindmsg[obj_fly] = msg_fly;
+    kindmsg[obj_macrotrig] = msg_macrotrig;
     kindmsg[obj_demon] = msg_demon;
+    kindmsg[obj_bunny] = msg_frog;
     kindmsg[obj_fatso] = msg_fatso;
     kindmsg[obj_inchworm] = msg_inchworm;
     kindmsg[obj_zapper] = msg_zapper;
@@ -902,7 +905,7 @@ void initobjinfo(void)
     kindmsg[obj_paul] = msg_paul; kindmsg[obj_key] = msg_key;
     kindmsg[obj_pad] = msg_pad;
     kindmsg[obj_wiseman] = msg_wiseman; kindmsg[obj_roman] = msg_roman;
-    kindmsg[obj_enemyshot] = msg_fireball;
+    kindmsg[obj_fireball] = msg_fireball;
     kindmsg[obj_cloud] = msg_cloud;
     kindmsg[obj_text6] = msg_text6;
     kindmsg[obj_text8] = msg_text8;
@@ -914,7 +917,7 @@ void initobjinfo(void)
     kindmsg[obj_score] = msg_score;
     kindmsg[obj_token] = msg_token; kindmsg[obj_ant] = msg_ant; kindmsg[obj_phoenix] = msg_phoenix;
     kindmsg[obj_fire] = msg_fire; kindmsg[obj_switch] = msg_switch; kindmsg[obj_gem] = msg_gem;
-    kindmsg[obj_explode] = msg_expl1; kindmsg[obj_boulder] = msg_boulder;
+    kindmsg[obj_txtmsg] = msg_txtmsg; kindmsg[obj_boulder] = msg_boulder;
     kindmsg[obj_expl1] = msg_expl1; kindmsg[obj_expl2] = msg_expl2;
     kindmsg[obj_stalag] = msg_stalag; kindmsg[obj_snake] = msg_snake;
     kindmsg[obj_searock] = msg_searock; kindmsg[obj_boll] = msg_boll; kindmsg[obj_mega] = msg_mega;
@@ -922,10 +925,11 @@ void initobjinfo(void)
     kindmsg[obj_beeswarm] = msg_beeswarm; kindmsg[obj_crab] = msg_crab; kindmsg[obj_croc] = msg_croc;
     kindmsg[obj_epic] = msg_epic; kindmsg[obj_spinblad] = msg_spinblad; kindmsg[obj_skull] = msg_skull;
     kindmsg[obj_button] = msg_button; kindmsg[obj_pac] = msg_pac;
-    kindmsg[obj_jillfish] = msg_jillfish; kindmsg[obj_jillbird] = msg_jillbird; kindmsg[obj_jillfrog] = msg_jillfrog;
+    kindmsg[obj_jillfish] = msg_jillfish; kindmsg[obj_jillspider] = msg_jillspider;
+    kindmsg[obj_jillbird] = msg_jillbird; kindmsg[obj_jillfrog] = msg_jillfrog;
     kindmsg[obj_bubble] = msg_bubble; kindmsg[obj_jellyfish] = msg_jellyfish; kindmsg[obj_badfish] = msg_badfish;
     kindmsg[obj_elev] = msg_elev; kindmsg[obj_firebullet] = msg_firebullet; kindmsg[obj_fishbullet] = msg_fishbullet;
-    kindmsg[obj_eyes] = msg_eyes; kindmsg[obj_vineclimb] = msg_vineclimb; kindmsg[obj_flag] = msg_flag;
-    kindmsg[obj_txtmsg] = msg_txtmsg; kindmsg[obj_mapdemo] = msg_mapdemo;
+    kindmsg[obj_eye] = msg_eyes; kindmsg[obj_vineclimb] = msg_vineclimb; kindmsg[obj_flag] = msg_flag;
+    kindmsg[obj_mapdemo] = msg_mapdemo;
 
 }
