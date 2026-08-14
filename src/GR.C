@@ -1,0 +1,465 @@
+/*
+===========================================================================
+
+Jill of the Jungle Reconstructed
+Copyright (C) 2026 Justin Marshall(IceColdDuke).
+
+This file is part of the Jill of the Jungle Reconstructed Source Code (?Jill of the Jungle Reconstructed?).
+
+Jill of the Jungle Reconstructed is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Jill of the Jungle Reconstructed is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/licenses/>.
+
+===========================================================================
+*/
+
+#include "GR.H"
+#include "HOSTWIN.H"
+#include "KEYBOARD.H"
+#include "SHM.H"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+byte x_ourmode = x_vga;
+vptype mainvp;
+uword cmtab[4][256];
+word pagemode, pageshow, pagedraw;
+word showofs, drawofs, pagelen = 16384;
+word pixelsperbyte = 1;
+word origmode;
+byte pixvalue;
+byte *LOST;
+byte vgapal[JILL_PALETTE_SIZE * 3] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x2a, 0x00, 0x00, 0x2a, 0x2a,
+    0x2a, 0x00, 0x00, 0x2a, 0x00, 0x2a, 0x2a, 0x15, 0x00, 0x2a, 0x2a, 0x2a,
+    0x15, 0x15, 0x15, 0x15, 0x15, 0x3f, 0x15, 0x3f, 0x15, 0x15, 0x3f, 0x3f,
+    0x3f, 0x15, 0x15, 0x3f, 0x15, 0x3f, 0x3f, 0x3f, 0x15, 0x3f, 0x3f, 0x3f,
+    0x07, 0x07, 0x07, 0x0e, 0x0e, 0x0e, 0x1b, 0x1b, 0x1b, 0x20, 0x20, 0x20,
+    0x25, 0x25, 0x25, 0x2f, 0x2f, 0x2f, 0x34, 0x34, 0x34, 0x39, 0x39, 0x39,
+    0x19, 0x0a, 0x00, 0x25, 0x0a, 0x00, 0x32, 0x0a, 0x00, 0x3f, 0x0a, 0x00,
+    0x00, 0x15, 0x00, 0x0c, 0x15, 0x00, 0x19, 0x15, 0x00, 0x25, 0x15, 0x00,
+    0x32, 0x15, 0x00, 0x3f, 0x15, 0x00, 0x00, 0x1f, 0x00, 0x0c, 0x1f, 0x00,
+    0x19, 0x1f, 0x00, 0x25, 0x1f, 0x00, 0x32, 0x1f, 0x00, 0x3f, 0x1f, 0x00,
+    0x00, 0x2a, 0x00, 0x0c, 0x2a, 0x00, 0x19, 0x2a, 0x00, 0x25, 0x2a, 0x00,
+    0x32, 0x2a, 0x00, 0x3f, 0x2a, 0x00, 0x0c, 0x34, 0x00, 0x19, 0x34, 0x00,
+    0x25, 0x34, 0x00, 0x32, 0x34, 0x00, 0x3f, 0x34, 0x00, 0x0c, 0x3f, 0x00,
+    0x19, 0x3f, 0x00, 0x25, 0x3f, 0x00, 0x32, 0x3f, 0x00, 0x3f, 0x3f, 0x00,
+    0x00, 0x00, 0x0c, 0x0c, 0x00, 0x0c, 0x19, 0x00, 0x0c, 0x25, 0x00, 0x0c,
+    0x32, 0x00, 0x0c, 0x3f, 0x00, 0x0c, 0x00, 0x0a, 0x0c, 0x0c, 0x0a, 0x0c,
+    0x19, 0x0a, 0x0c, 0x25, 0x0a, 0x0c, 0x32, 0x0a, 0x0c, 0x3f, 0x0a, 0x0c,
+    0x00, 0x15, 0x0c, 0x0c, 0x15, 0x0c, 0x19, 0x15, 0x0c, 0x25, 0x15, 0x0c,
+    0x32, 0x15, 0x0c, 0x3f, 0x15, 0x0c, 0x00, 0x1f, 0x0c, 0x0c, 0x1f, 0x0c,
+    0x19, 0x1f, 0x0c, 0x25, 0x1f, 0x0c, 0x32, 0x1f, 0x0c, 0x3f, 0x1f, 0x0c,
+    0x00, 0x2a, 0x0c, 0x0c, 0x2a, 0x0c, 0x19, 0x2a, 0x0c, 0x25, 0x2a, 0x0c,
+    0x32, 0x2a, 0x0c, 0x3f, 0x2a, 0x0c, 0x0c, 0x34, 0x0c, 0x19, 0x34, 0x0c,
+    0x25, 0x34, 0x0c, 0x32, 0x34, 0x0c, 0x3f, 0x34, 0x0c, 0x0c, 0x3f, 0x0c,
+    0x19, 0x3f, 0x0c, 0x25, 0x3f, 0x0c, 0x32, 0x3f, 0x0c, 0x3f, 0x3f, 0x0c,
+    0x00, 0x00, 0x19, 0x0c, 0x00, 0x19, 0x19, 0x00, 0x19, 0x25, 0x00, 0x19,
+    0x32, 0x00, 0x19, 0x3f, 0x00, 0x19, 0x00, 0x0a, 0x19, 0x0c, 0x0a, 0x19,
+    0x19, 0x0a, 0x19, 0x25, 0x0a, 0x19, 0x32, 0x0a, 0x19, 0x3f, 0x0a, 0x19,
+    0x00, 0x15, 0x19, 0x0c, 0x15, 0x19, 0x19, 0x15, 0x19, 0x25, 0x15, 0x19,
+    0x32, 0x15, 0x19, 0x3f, 0x15, 0x19, 0x00, 0x1f, 0x19, 0x0c, 0x1f, 0x19,
+    0x19, 0x1f, 0x19, 0x25, 0x1f, 0x19, 0x32, 0x1f, 0x19, 0x3f, 0x1f, 0x19,
+    0x00, 0x2a, 0x19, 0x0c, 0x2a, 0x19, 0x19, 0x2a, 0x19, 0x25, 0x2a, 0x19,
+    0x32, 0x2a, 0x19, 0x3f, 0x2a, 0x19, 0x0c, 0x34, 0x19, 0x19, 0x34, 0x19,
+    0x25, 0x34, 0x19, 0x32, 0x34, 0x19, 0x3f, 0x34, 0x19, 0x0c, 0x3f, 0x19,
+    0x19, 0x3f, 0x19, 0x25, 0x3f, 0x19, 0x32, 0x3f, 0x19, 0x3f, 0x3f, 0x19,
+    0x00, 0x00, 0x25, 0x0c, 0x00, 0x25, 0x19, 0x00, 0x25, 0x25, 0x00, 0x25,
+    0x32, 0x00, 0x25, 0x3f, 0x00, 0x25, 0x00, 0x0a, 0x25, 0x0c, 0x0a, 0x25,
+    0x19, 0x0a, 0x25, 0x25, 0x0a, 0x25, 0x32, 0x0a, 0x25, 0x3f, 0x0a, 0x25,
+    0x00, 0x15, 0x25, 0x0c, 0x15, 0x25, 0x19, 0x15, 0x25, 0x25, 0x15, 0x25,
+    0x32, 0x15, 0x25, 0x3f, 0x15, 0x25, 0x00, 0x1f, 0x25, 0x0c, 0x1f, 0x25,
+    0x19, 0x1f, 0x25, 0x25, 0x1f, 0x25, 0x32, 0x1f, 0x25, 0x3f, 0x1f, 0x25,
+    0x00, 0x2a, 0x25, 0x0c, 0x2a, 0x25, 0x19, 0x2a, 0x25, 0x25, 0x2a, 0x25,
+    0x32, 0x2a, 0x25, 0x3f, 0x2a, 0x25, 0x0c, 0x34, 0x25, 0x19, 0x34, 0x25,
+    0x25, 0x34, 0x25, 0x32, 0x34, 0x25, 0x3f, 0x34, 0x25, 0x0c, 0x3f, 0x25,
+    0x19, 0x3f, 0x25, 0x25, 0x3f, 0x25, 0x32, 0x3f, 0x25, 0x3f, 0x3f, 0x25,
+    0x00, 0x00, 0x32, 0x0c, 0x00, 0x32, 0x19, 0x00, 0x32, 0x25, 0x00, 0x32,
+    0x32, 0x00, 0x32, 0x3f, 0x00, 0x32, 0x00, 0x0a, 0x32, 0x0c, 0x0a, 0x32,
+    0x19, 0x0a, 0x32, 0x25, 0x0a, 0x32, 0x32, 0x0a, 0x32, 0x3f, 0x0a, 0x32,
+    0x00, 0x15, 0x32, 0x0c, 0x15, 0x32, 0x19, 0x15, 0x32, 0x25, 0x15, 0x32,
+    0x32, 0x15, 0x32, 0x3f, 0x15, 0x32, 0x00, 0x1f, 0x32, 0x0c, 0x1f, 0x32,
+    0x19, 0x1f, 0x32, 0x25, 0x1f, 0x32, 0x32, 0x1f, 0x32, 0x3f, 0x1f, 0x32,
+    0x00, 0x2a, 0x32, 0x0c, 0x2a, 0x32, 0x19, 0x2a, 0x32, 0x25, 0x2a, 0x32,
+    0x32, 0x2a, 0x32, 0x3f, 0x2a, 0x32, 0x0c, 0x34, 0x32, 0x19, 0x34, 0x32,
+    0x25, 0x34, 0x32, 0x32, 0x34, 0x32, 0x3f, 0x34, 0x32, 0x0c, 0x3f, 0x32,
+    0x19, 0x3f, 0x32, 0x25, 0x3f, 0x32, 0x32, 0x3f, 0x32, 0x3f, 0x3f, 0x32,
+    0x00, 0x00, 0x3f, 0x0c, 0x00, 0x3f, 0x19, 0x00, 0x3f, 0x25, 0x00, 0x3f,
+    0x32, 0x00, 0x3f, 0x3f, 0x00, 0x3f, 0x00, 0x0a, 0x3f, 0x0c, 0x0a, 0x3f,
+    0x19, 0x0a, 0x3f, 0x25, 0x0a, 0x3f, 0x32, 0x0a, 0x3f, 0x3f, 0x0a, 0x3f,
+    0x00, 0x15, 0x3f, 0x0c, 0x15, 0x3f, 0x19, 0x15, 0x3f, 0x25, 0x15, 0x3f,
+    0x32, 0x15, 0x3f, 0x3f, 0x15, 0x3f, 0x00, 0x1f, 0x3f, 0x0c, 0x1f, 0x3f,
+    0x19, 0x1f, 0x3f, 0x25, 0x1f, 0x3f, 0x32, 0x1f, 0x3f, 0x3f, 0x1f, 0x3f,
+    0x00, 0x2a, 0x3f, 0x0c, 0x2a, 0x3f, 0x19, 0x2a, 0x3f, 0x25, 0x2a, 0x3f,
+    0x32, 0x2a, 0x3f, 0x3f, 0x2a, 0x3f, 0x0c, 0x34, 0x3f, 0x19, 0x34, 0x3f,
+    0x25, 0x34, 0x3f, 0x32, 0x34, 0x3f, 0x3f, 0x34, 0x3f, 0x0c, 0x3f, 0x3f,
+    0x19, 0x3f, 0x3f, 0x25, 0x3f, 0x3f, 0x32, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f,
+};
+byte jill_video[JILL_PAGE_COUNT][JILL_SCREEN_HEIGHT][JILL_SCREEN_WIDTH];
+static byte display_palette[JILL_PALETTE_SIZE * 3];
+
+static void present_page(void)
+{
+    host_present(&jill_video[pageshow != 0][0][0], display_palette);
+}
+
+void pixaddr_cga(int x, int y, byte **vidbuf, byte *bitc)
+{
+    pixaddr_vga(x, y, vidbuf, bitc);
+    if (bitc != NULL) *bitc = (byte)((x & 3) * 2);
+}
+
+void pixaddr_ega(int x, int y, byte **vidbuf, byte *bitc)
+{
+    pixaddr_vga(x, y, vidbuf, bitc);
+    if (bitc != NULL) *bitc = (byte)(x & 7);
+}
+
+void pixaddr_vga(int x, int y, byte **vidbuf, byte *bitc)
+{
+    if (vidbuf != NULL) {
+        if (x >= 0 && x < JILL_SCREEN_WIDTH && y >= 0 && y < JILL_SCREEN_HEIGHT)
+            *vidbuf = &jill_video[pagedraw != 0][y][x];
+        else
+            *vidbuf = NULL;
+    }
+    if (bitc != NULL) *bitc = (byte)(x & 3);
+}
+
+void drawshape(vptype *vp, int n, int x, int y)
+{
+    int shape_number = n & 0xff;
+    int table_number = n >> 8;
+    int color_table;
+    const byte *entry;
+    const byte *pixels;
+    uword offset;
+    int width, height;
+
+    if ((table_number & 0x40) != 0) {
+        color_table = 3;
+        table_number ^= 0x40;
+    } else {
+        color_table = shm_flags[table_number] & shm_fontf;
+    }
+    if (table_number <= 0 || table_number >= SHM_MAX_TABLES) return;
+    if (shm_tbladdr[table_number] == NULL) {
+        shm_want[table_number] = 1;
+        shm_do();
+        if (shm_tbladdr[table_number] == NULL)
+            shm_tbladdr[table_number] = LOST;
+    }
+    if (shm_tbladdr[table_number] != LOST) {
+        entry = shm_tbladdr[table_number] + shape_number * 4;
+        offset = jill_read_u16_le(entry);
+        width = entry[2];
+        height = entry[3];
+        pixels = shm_tbladdr[table_number] + offset;
+        x -= vp->vpox;
+        y -= vp->vpoy;
+        if (y < vp->vpyl && y + height >= 0 && x < vp->vpxl &&
+            x + width * pixelsperbyte >= 0) {
+            switch (x_ourmode & 0xfe) {
+            case x_cga:
+                ldrawsh_cga(vp, x, y, width, height, pixels, color_table);
+                break;
+            case x_ega:
+                ldrawsh_ega(vp, x, y, width, height, pixels, color_table);
+                break;
+            case x_vga:
+                ldrawsh_vga(vp, x, y, width, height, pixels, color_table);
+                break;
+            }
+        }
+    }
+}
+
+void plot(vptype *vp, int x, int y, int color)
+{
+    if (vp == NULL) return;
+    if (x < 0 || y < 0 || x >= vp->vpxl || y >= vp->vpyl) return;
+    switch (x_ourmode & 0xfe) {
+    case x_cga:
+        plot_cga(vp->vpx + x, vp->vpy + y, (byte)(color & 3));
+        break;
+    case x_ega:
+        plot_ega(vp->vpx + x, vp->vpy + y, (byte)(color & 15));
+        break;
+    case x_vga:
+        plot_vga(vp->vpx + x, vp->vpy + y, (byte)color);
+        break;
+    }
+}
+
+void linex(int x0, int y0, int x1, int y1, int color)
+{
+    if ((x_ourmode & 0xfe) == x_cga)
+        line_cga(x0, y0, x1, y1, (byte)color);
+}
+
+void waitsafe(void)
+{
+    /* Exact body polls VGA input-status bit 3; direct port I/O is a host boundary. */
+}
+
+void wait_vbi(void)
+{
+    /* In VGA mode the exact body waits for bit 3 to clear and then become set;
+       direct input-status port I/O is a host boundary. */
+}
+
+void setcm_cga(int table, int lo0, int lo1, int lo2, int lo3,
+               int hi0, int hi1, int hi2, int hi3)
+{
+    uword colors[4];
+    int color, shift;
+
+    colors[0] = (uword)(((uword)hi0 << 8) | (byte)lo0);
+    colors[1] = (uword)(((uword)hi1 << 8) | (byte)lo1);
+    colors[2] = (uword)(((uword)hi2 << 8) | (byte)lo2);
+    colors[3] = (uword)(((uword)hi3 << 8) | (byte)lo3);
+    for (color = 0; color < 256; ++color) {
+        uword value = 0;
+        for (shift = 0; shift < 8; shift += 2)
+            value |= (uword)(colors[(color >> shift) & 3] << shift);
+        cmtab[table][color] = value;
+    }
+}
+
+void fontcolor_cga(int hi, int lo, int back)
+{
+    int unused_color = 0;
+    int unused_mask = 0;
+
+    while (unused_color == hi || unused_color == lo || unused_color == back)
+        ++unused_color;
+    if (back == -1) {
+        while (unused_mask == hi || unused_mask == lo || unused_mask == unused_color)
+            ++unused_mask;
+        setcm_cga(1, unused_color, hi, lo, unused_mask, 0, 3, 3, 0);
+    } else {
+        setcm_cga(1, unused_color, hi, lo, back, 0, 3, 3, 3);
+    }
+}
+
+void fontcolor_ega(int hi, int lo, int back)
+{
+    cmtab[1][0] = 16;
+    cmtab[1][1] = (uword)lo;
+    cmtab[1][2] = (uword)hi;
+    cmtab[1][3] = back == -1 ? 16 : (uword)back;
+}
+
+void fontcolor_vga(int hi, int lo, int back)
+{
+    cmtab[1][0] = 255;
+    cmtab[1][1] = (uword)lo;
+    cmtab[1][2] = (uword)hi;
+    cmtab[1][3] = back == -1 ? 255 : (uword)back;
+}
+
+void fntcolor(int hi, int lo, int back)
+{
+    switch (x_ourmode & 0xfe) {
+    case x_cga:
+        if (back == -1) fontcolor_cga(2, 2, -1);
+        else fontcolor_cga(3, 1, 0);
+        break;
+    case x_ega:
+        fontcolor_ega(lo, hi, back);
+        break;
+    case x_vga:
+        fontcolor_vga(lo, hi, back);
+        break;
+    }
+}
+
+void initcolortabs_cga(void)
+{
+    setcm_cga(0, 0, 1, 2, 3, 0, 3, 3, 3);
+    fontcolor_cga(3, 1, 0);
+    setcm_cga(2, 0, 0, 0, 0, 0, 3, 3, 3);
+    setcm_cga(3, 0, 1, 2, 3, 3, 3, 3, 3);
+}
+
+void initcolortabs_ega(void)
+{
+    int color;
+    for (color = 0; color < 16; ++color) {
+        cmtab[0][color] = (uword)color;
+        cmtab[2][color] = 0;
+        cmtab[3][color] = (uword)color;
+    }
+    cmtab[0][0] = 16;
+    cmtab[2][0] = 16;
+}
+
+void initcolortabs_vga(void)
+{
+    int color;
+    for (color = 0; color < 256; ++color) {
+        cmtab[0][color] = (uword)color;
+        cmtab[2][color] = 0;
+        cmtab[3][color] = (uword)color;
+    }
+    cmtab[0][0] = 255;
+    cmtab[2][0] = 255;
+}
+
+void setpages(void)
+{
+    showofs = (word)(pageshow * pagelen);
+    drawofs = (word)(pagedraw * pagelen);
+}
+
+void setpagemode(int mode)
+{
+    if (mode && (x_ourmode & 0xfe) != x_cga) {
+        pagemode = 1;
+        pagedraw = (word)(1 - pageshow);
+        setpages();
+        lcopypage();
+    } else {
+        pagemode = 0;
+        pagedraw = pageshow;
+        drawofs = showofs;
+    }
+}
+
+int getportnum(void) { return 0x3d4; }
+
+void pageflip(void)
+{
+    if ((x_ourmode & 0xfe) == x_cga) return;
+    pageshow = (word)!pageshow;
+    pagedraw = (word)!pagedraw;
+    setpages();
+    present_page();
+}
+
+void vga_setpal(void)
+{
+    if (x_ourmode == x_vga) {
+        memcpy(display_palette, vgapal, sizeof(display_palette));
+        present_page();
+    }
+}
+
+void readpal(byte *palette)
+{
+    if (x_ourmode == x_vga)
+        memcpy(palette, display_palette, JILL_PALETTE_SIZE * 3);
+}
+
+void clrpal(void)
+{
+    if (x_ourmode == x_vga) {
+        memset(display_palette, 0, sizeof(display_palette));
+        present_page();
+    }
+}
+
+void fadein(void)
+{
+    int scale;
+    int component;
+    if (x_ourmode != x_vga) return;
+    for (scale = 0; scale < 64; scale += 2) {
+        for (component = 0; component < JILL_PALETTE_SIZE * 3; ++component)
+            display_palette[component] = (byte)(((uword)vgapal[component] * scale) >> 6);
+        waitsafe();
+        present_page();
+    }
+}
+
+void setcolor(int color, int red, int green, int blue)
+{
+    display_palette[color * 3] = (byte)red;
+    display_palette[color * 3 + 1] = (byte)green;
+    display_palette[color * 3 + 2] = (byte)blue;
+    present_page();
+}
+
+void fadeout(void)
+{
+    int scale;
+    int component;
+    if (x_ourmode != x_vga) return;
+    for (scale = 63; scale >= 0; scale -= 2) {
+        for (component = 0; component < JILL_PALETTE_SIZE * 3; ++component)
+            display_palette[component] = (byte)(((uword)vgapal[component] * scale) >> 6);
+        waitsafe();
+        present_page();
+    }
+}
+
+int gr_config(void)
+{
+    int selection;
+
+    fputs(" (C/E/V)? ", stdout);
+    do {
+        selection = toupper(k_read());
+    } while (selection != 'C' && selection != 'E' && selection != 'V' &&
+             selection != escape);
+    switch (selection) {
+    case 'C': x_ourmode = x_cga; break;
+    case 'E': x_ourmode = x_ega; break;
+    case 'V': x_ourmode = x_vga; break;
+    case escape: return 0;
+    }
+    return 1;
+}
+
+void gr_init(void)
+{
+    memset(jill_video, 0, sizeof(jill_video));
+    origmode = 3;
+    mainvp.vpx = mainvp.vpy = mainvp.vpox = mainvp.vpoy = 0;
+    mainvp.vpxl = JILL_SCREEN_WIDTH;
+    mainvp.vpyl = JILL_SCREEN_HEIGHT;
+    pagemode = pageshow = pagedraw = 0;
+    showofs = drawofs = 0;
+
+    switch (x_ourmode) {
+    case x_cga:
+        initcolortabs_cga();
+        pixelsperbyte = 4;
+        clrvp(&mainvp, 0);
+        break;
+    case x_ega:
+        pagelen = 0x2000;
+        initcolortabs_ega();
+        fontcolor_ega(1, 9, 0);
+        pixelsperbyte = 8;
+        clrvp(&mainvp, 0);
+        break;
+    case x_vga:
+        pagelen = 0x4000;
+        initcolortabs_vga();
+        fontcolor_vga(42, 34, 0);
+        pixelsperbyte = 1;
+        clrpal();
+        clrvp(&mainvp, 0);
+        vga_setpal();
+        break;
+    }
+    LOST = (byte *)malloc(1);
+}
+
+void gr_exit(void)
+{
+    /* Exact body restores origmode through BIOS INT 10h, a DOS host boundary. */
+}
