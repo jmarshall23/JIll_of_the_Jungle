@@ -82,6 +82,7 @@ void setpages(void);
 void setpagemode(int mode);
 int getportnum(void);
 void pageflip(void);
+void gr_present_page(void);
 void wait_vbi(void);
 void vga_setpal(void);
 void readpal(byte *palette);

@@ -110,7 +110,7 @@ byte vgapal[JILL_PALETTE_SIZE * 3] = {
 byte jill_video[JILL_PAGE_COUNT][JILL_SCREEN_HEIGHT][JILL_SCREEN_WIDTH];
 static byte display_palette[JILL_PALETTE_SIZE * 3];
 
-static void present_page(void)
+void gr_present_page(void)
 {
     host_present(&jill_video[pageshow != 0][0][0], display_palette);
 }
@@ -346,14 +346,14 @@ void pageflip(void)
     pageshow = (word)!pageshow;
     pagedraw = (word)!pagedraw;
     setpages();
-    present_page();
+    gr_present_page();
 }
 
 void vga_setpal(void)
 {
     if (x_ourmode == x_vga) {
         memcpy(display_palette, vgapal, sizeof(display_palette));
-        present_page();
+        gr_present_page();
     }
 }
 
@@ -367,7 +367,7 @@ void clrpal(void)
 {
     if (x_ourmode == x_vga) {
         memset(display_palette, 0, sizeof(display_palette));
-        present_page();
+        gr_present_page();
     }
 }
 
@@ -380,7 +380,7 @@ void fadein(void)
         for (component = 0; component < JILL_PALETTE_SIZE * 3; ++component)
             display_palette[component] = (byte)(((uword)vgapal[component] * scale) >> 6);
         waitsafe();
-        present_page();
+        gr_present_page();
     }
 }
 
@@ -389,7 +389,7 @@ void setcolor(int color, int red, int green, int blue)
     display_palette[color * 3] = (byte)red;
     display_palette[color * 3 + 1] = (byte)green;
     display_palette[color * 3 + 2] = (byte)blue;
-    present_page();
+    gr_present_page();
 }
 
 void fadeout(void)
@@ -401,7 +401,7 @@ void fadeout(void)
         for (component = 0; component < JILL_PALETTE_SIZE * 3; ++component)
             display_palette[component] = (byte)(((uword)vgapal[component] * scale) >> 6);
         waitsafe();
-        present_page();
+        gr_present_page();
     }
 }
 

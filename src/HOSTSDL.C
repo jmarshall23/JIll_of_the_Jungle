@@ -19,6 +19,7 @@ static SDL_Thread *host_clock_thread;
 static SDL_atomic_t host_clock_stop;
 static int host_sdl_initialized;
 static int host_opened;
+static Uint32 host_next_present;
 static byte host_keys[HOST_KEY_CAPACITY];
 static int host_queue[HOST_QUEUE_CAPACITY];
 static unsigned host_queue_read, host_queue_write;
@@ -192,6 +193,7 @@ int host_open(const char *title, int scale)
         goto failed;
     host_clear_keys();
     host_opened = 1;
+    host_next_present = 0;
     host_start_clock();
     render_frame();
     SDL_RaiseWindow(host_window);
@@ -245,6 +247,14 @@ int host_pump(void)
             break;
         default:
             break;
+        }
+    }
+    if (host_opened) {
+        Uint32 now = SDL_GetTicks();
+        if ((Sint32)(now - host_next_present) >= 0) {
+            /* DOS drew visible-page changes immediately; refresh that page here. */
+            gr_present_page();
+            host_next_present = now + 16;
         }
     }
     return host_opened;
