@@ -125,6 +125,25 @@ set_source_files_properties(tools/CMF_VALIDATE.C CMFOPL.C PROPERTIES LANGUAGE C)
 target_compile_features(jill_cmf_validate PRIVATE c_std_11)
 target_link_libraries(jill_cmf_validate PRIVATE nuked_opl3)
 
+add_executable(jill_sfx_validate EXCLUDE_FROM_ALL
+    tools/SFX_VALIDATE.C
+    HOSTAUDIO.C
+    CMFOPL.C
+)
+set_source_files_properties(tools/SFX_VALIDATE.C PROPERTIES LANGUAGE C)
+target_compile_features(jill_sfx_validate PRIVATE c_std_11)
+target_include_directories(jill_sfx_validate PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(jill_sfx_validate PRIVATE
+    _CRT_SECURE_NO_WARNINGS
+    TIMIDITY_STATIC=1
+)
+target_link_libraries(jill_sfx_validate PRIVATE
+    SDL2::SDL2-static
+    OpenAL::OpenAL
+    nuked_opl3
+    timidity
+)
+
 # Keep the deliverable beside the original Jill data files, regardless of
 # whether a single- or multi-configuration CMake generator is used.
 set_target_properties(jill1 PROPERTIES

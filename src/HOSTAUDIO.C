@@ -16,6 +16,13 @@
 #define MUSIC_BUFFER_FRAMES  4096
 #define MUSIC_BUFFER_COUNT      4
 
+/* snd_do allocates 0x7800 bytes for four VOC cache entries spaced 0x1800
+   bytes apart.  The final 0x1800 bytes are deliberate spill capacity for
+   the shipped long effects (the largest block is 0x2cfe bytes). */
+#define VOC_CACHE_STRIDE       0x1800UL
+#define VOC_HEADER_SIZE          0x20UL
+#define VOC_BLOCK_LIMIT (VOC_CACHE_STRIDE * 2UL - VOC_HEADER_SIZE)
+
 typedef struct music_job {
     cmf_opl_player *player;
 } music_job;
@@ -268,7 +275,7 @@ int host_audio_play_voc(const byte *voc, int volume)
     block_length = (ulongword)voc[block_offset + 1]
         | ((ulongword)voc[block_offset + 2] << 8)
         | ((ulongword)voc[block_offset + 3] << 16);
-    if (block_length <= 2 || block_length > 0x1802UL ||
+    if (block_length <= 2 || block_length > VOC_BLOCK_LIMIT ||
         voc[block_offset + 5] != 0) return 0;
     sample_count = (size_t)block_length - 2;
     sample_rate = 1000000U / (256U - voc[block_offset + 4]);
