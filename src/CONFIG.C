@@ -25,7 +25,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "CONFIG.H"
 #include "GAMECTRL.H"
 #include "GR.H"
-#include "HOSTWIN.H"
+#include "HOSTSDL.H"
 #include "KEYBOARD.H"
 #include "MUSIC.H"
 

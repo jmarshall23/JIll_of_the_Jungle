@@ -23,7 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "GR.H"
-#include "HOSTWIN.H"
+#include "HOSTSDL.H"
 #include "KEYBOARD.H"
 #include "SHM.H"
 

@@ -25,7 +25,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "DESIGN.H"
 
 #include "GAMECTRL.H"
-#include "HOSTWIN.H"
+#include "HOSTSDL.H"
 #include "JILL.H"
 #include "JUNGLE.H"
 #include "KEYBOARD.H"

@@ -23,7 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "RECOVERY.H"
-#include "HOSTWIN.H"
+#include "HOSTSDL.H"
 
 #include <fcntl.h>
 #include <io.h>

@@ -23,13 +23,9 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "KEYBOARD.H"
-#include "HOSTWIN.H"
+#include "HOSTSDL.H"
 
 #include <string.h>
-
-#if defined(_WIN32)
-#include <conio.h>
-#endif
 
 sbyte k_rshift, k_lshift, k_shift, k_ctrl, k_alt, k_numlock;
 volatile byte keydown[2][256];
@@ -41,11 +37,7 @@ int k_pressed(void)
         (void)host_pump();
         return host_peek_key();
     }
-#if defined(_WIN32)
-    return _kbhit() ? 1 : 0;
-#else
     return 0;
-#endif
 }
 
 int k_read(void)
@@ -57,15 +49,7 @@ int k_read(void)
         }
         return host_read_key();
     }
-#if defined(_WIN32)
-    {
-        int value = _getch();
-        if (value == 0 || value == 0xe0) value = 128 | _getch();
-        return value;
-    }
-#else
     return 0;
-#endif
 }
 
 void k_status(void)

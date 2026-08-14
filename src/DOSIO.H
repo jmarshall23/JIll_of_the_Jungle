@@ -1,4 +1,4 @@
-/* DOSIO.H - DOS file-creation semantics at the Win32 host boundary. */
+/* DOSIO.H - DOS file-creation semantics at the native host boundary. */
 #ifndef JILL_DOSIO_H
 #define JILL_DOSIO_H
 

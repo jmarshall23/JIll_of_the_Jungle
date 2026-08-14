@@ -10,7 +10,16 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
         "With Visual Studio use: cmake -S src -B build -A Win32")
 endif()
 
-# The Win32 host boundary uses a vendored, statically linked OpenAL Soft.
+# SDL2 owns the native window, renderer, keyboard, timer, and host threads.
+# Build only its static library and SDL2main so the game remains a single EXE.
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
+set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+set(SDL2_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+add_subdirectory(thirdparty/SDL2 EXCLUDE_FROM_ALL)
+
+# The audio boundary uses a vendored, statically linked OpenAL Soft.
 # Only WASAPI playback is required by Jill; tools, examples, installation
 # rules, capture-only legacy backends, and loadable OpenAL modules are omitted.
 set(LIBTYPE STATIC CACHE STRING "Build OpenAL Soft statically" FORCE)
@@ -72,7 +81,7 @@ set(JILL_SOURCES
     GR.C
     GRASM.C
     HOSTAUDIO.C
-    HOSTWIN.C
+    HOSTSDL.C
     JINFO.C
     JMAN.C
     JOBJ.C
@@ -98,7 +107,12 @@ set(JILL_SOURCES
 # C++ from that suffix, so force these files to the C frontend.
 set_source_files_properties(${JILL_SOURCES} PROPERTIES LANGUAGE C)
 
-add_executable(jill1 ${JILL_SOURCES})
+set(JILL_PLATFORM_SOURCES)
+if(WIN32)
+    list(APPEND JILL_PLATFORM_SOURCES JILL.RC)
+endif()
+
+add_executable(jill1 WIN32 ${JILL_SOURCES} ${JILL_PLATFORM_SOURCES})
 target_compile_features(jill1 PRIVATE c_std_11)
 
 # Host-only decoder check.  It is excluded from the normal game build but
@@ -128,18 +142,24 @@ if(MSVC)
     target_compile_definitions(jill1 PRIVATE
         _CRT_SECURE_NO_WARNINGS
         TIMIDITY_STATIC=1
-        WIN32_LEAN_AND_MEAN
     )
     target_link_libraries(jill1 PRIVATE
+        SDL2::SDL2main
+        SDL2::SDL2-static
         OpenAL::OpenAL
         nuked_opl3
         timidity
-        user32
-        gdi32
     )
     target_compile_options(jill_cmf_validate PRIVATE /TC /W4)
     target_compile_definitions(jill_cmf_validate PRIVATE _CRT_SECURE_NO_WARNINGS)
 else()
     target_compile_options(jill1 PRIVATE -m32 -Wall -Wextra -Wpedantic)
     target_link_options(jill1 PRIVATE -m32)
+    target_link_libraries(jill1 PRIVATE
+        SDL2::SDL2main
+        SDL2::SDL2-static
+        OpenAL::OpenAL
+        nuked_opl3
+        timidity
+    )
 endif()

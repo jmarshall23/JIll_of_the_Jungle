@@ -2,13 +2,9 @@
 #include "HOSTAUDIO.H"
 #include "CMFOPL.H"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <SDL.h>
 #include <timidity.h>
 
 #include <stdint.h>
@@ -22,7 +18,6 @@
 
 typedef struct music_job {
     cmf_opl_player *player;
-    HANDLE stop_event;
 } music_job;
 
 static ALCdevice *audio_device;
@@ -32,10 +27,10 @@ static ALuint voc_buffer;
 static int voc_source_ready;
 static int voc_play_volume = 127;
 
-static HANDLE music_thread;
-static HANDLE music_stop_event;
-static volatile LONG music_playing;
-static volatile LONG music_gain_milli = 1000;
+static SDL_Thread *music_thread;
+static SDL_atomic_t music_stop_requested;
+static SDL_atomic_t music_playing;
+static SDL_atomic_t music_gain_milli;
 
 static byte master_left = 15;
 static byte master_right = 15;
@@ -56,18 +51,22 @@ static int make_audio_context_current(void)
 
 static int timidity_config_path(char *path, size_t capacity)
 {
-    static const char suffix[] = "src\\thirdparty\\freepats\\crude.cfg";
-    DWORD length;
-    char *separator;
+    static const char suffix[] = "src/thirdparty/freepats/crude.cfg";
+    char *base = SDL_GetBasePath();
+    size_t base_length;
 
-    if (capacity == 0 || capacity > MAXDWORD) return 0;
-    length = GetModuleFileNameA(NULL, path, (DWORD)capacity);
-    if (length == 0 || length >= capacity) return 0;
-    separator = strrchr(path, '\\');
-    if (separator == NULL) separator = strrchr(path, '/');
-    if (separator == NULL ||
-        (size_t)(separator + 1 - path) + sizeof(suffix) > capacity) return 0;
-    memcpy(separator + 1, suffix, sizeof(suffix));
+    if (base == NULL || capacity == 0) {
+        SDL_free(base);
+        return 0;
+    }
+    base_length = strlen(base);
+    if (base_length + sizeof(suffix) > capacity) {
+        SDL_free(base);
+        return 0;
+    }
+    memcpy(path, base, base_length);
+    memcpy(path + base_length, suffix, sizeof(suffix));
+    SDL_free(base);
     return 1;
 }
 
@@ -89,7 +88,7 @@ static int fill_music_buffer(music_job *job, ALuint buffer)
     return alGetError() == AL_NO_ERROR;
 }
 
-static DWORD WINAPI music_thread_proc(void *parameter)
+static int SDLCALL music_thread_proc(void *parameter)
 {
     music_job *job = (music_job *)parameter;
     ALuint source = 0;
@@ -97,6 +96,7 @@ static DWORD WINAPI music_thread_proc(void *parameter)
     int queued = 0;
     int index;
 
+    (void)SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
     (void)make_audio_context_current();
     while (alGetError() != AL_NO_ERROR) { }
     alGenSources(1, &source);
@@ -104,8 +104,7 @@ static DWORD WINAPI music_thread_proc(void *parameter)
     if (alGetError() != AL_NO_ERROR || source == 0) goto done;
 
     alSourcef(source, AL_GAIN,
-              (ALfloat)InterlockedCompareExchange(&music_gain_milli, 0, 0) /
-              1000.0f);
+              (ALfloat)SDL_AtomicGet(&music_gain_milli) / 1000.0f);
     for (index = 0; index < MUSIC_BUFFER_COUNT; ++index) {
         if (!fill_music_buffer(job, buffers[index])) break;
         alSourceQueueBuffers(source, 1, &buffers[index]);
@@ -114,14 +113,13 @@ static DWORD WINAPI music_thread_proc(void *parameter)
     if (queued == 0 || alGetError() != AL_NO_ERROR) goto done;
 
     alSourcePlay(source);
-    InterlockedExchange(&music_playing, 1);
-    while (WaitForSingleObject(job->stop_event, 0) != WAIT_OBJECT_0) {
+    SDL_AtomicSet(&music_playing, 1);
+    while (!SDL_AtomicGet(&music_stop_requested)) {
         ALint processed = 0;
         ALint state = AL_STOPPED;
 
         alSourcef(source, AL_GAIN,
-                  (ALfloat)InterlockedCompareExchange(&music_gain_milli, 0, 0) /
-                  1000.0f);
+                  (ALfloat)SDL_AtomicGet(&music_gain_milli) / 1000.0f);
         alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
         while (processed-- > 0) {
             ALuint buffer;
@@ -135,11 +133,11 @@ static DWORD WINAPI music_thread_proc(void *parameter)
         if (queued == 0) break;
         alGetSourcei(source, AL_SOURCE_STATE, &state);
         if (state != AL_PLAYING) alSourcePlay(source);
-        if (WaitForSingleObject(job->stop_event, 5) == WAIT_OBJECT_0) break;
+        SDL_Delay(5);
     }
 
 done:
-    InterlockedExchange(&music_playing, 0);
+    SDL_AtomicSet(&music_playing, 0);
     if (source != 0) {
         ALint count = 0;
         alSourceStop(source);
@@ -158,10 +156,11 @@ done:
 
 int host_audio_start(void)
 {
-    char config_path[MAX_PATH];
+    char config_path[1024];
 
     if (audio_started) return digital_available || music_available;
     audio_started = 1;
+    SDL_AtomicSet(&music_gain_milli, 1000);
     audio_device = alcOpenDevice(NULL);
     if (audio_device == NULL) return 0;
     audio_context = alcCreateContext(audio_device, NULL);
@@ -234,8 +233,8 @@ void host_audio_set_music_volume(byte left, byte right)
 {
     unsigned clipped_left = left > 15 ? 15 : left;
     unsigned clipped_right = right > 15 ? 15 : right;
-    InterlockedExchange(&music_gain_milli,
-        (LONG)((clipped_left + clipped_right) * 1000U / 30U));
+    SDL_AtomicSet(&music_gain_milli,
+        (int)((clipped_left + clipped_right) * 1000U / 30U));
 }
 
 void host_audio_stop_voc(void)
@@ -293,15 +292,12 @@ int host_audio_play_voc(const byte *voc, int volume)
 
 void host_audio_stop_music(void)
 {
-    if (music_stop_event != NULL) SetEvent(music_stop_event);
+    SDL_AtomicSet(&music_stop_requested, 1);
     if (music_thread != NULL) {
-        (void)WaitForSingleObject(music_thread, 10000);
-        CloseHandle(music_thread);
+        SDL_WaitThread(music_thread, NULL);
     }
-    if (music_stop_event != NULL) CloseHandle(music_stop_event);
     music_thread = NULL;
-    music_stop_event = NULL;
-    InterlockedExchange(&music_playing, 0);
+    SDL_AtomicSet(&music_playing, 0);
 }
 
 int host_audio_play_cmf(const byte *cmf, size_t length, int loop)
@@ -319,26 +315,17 @@ int host_audio_play_cmf(const byte *cmf, size_t length, int loop)
         return 0;
     }
     job->player = player;
-    job->stop_event = CreateEventA(NULL, TRUE, FALSE, NULL);
-    if (job->stop_event == NULL) {
-        cmf_opl_destroy(player);
-        free(job);
-        return 0;
-    }
-    music_stop_event = job->stop_event;
-    music_thread = CreateThread(NULL, 0, music_thread_proc, job, 0, NULL);
+    SDL_AtomicSet(&music_stop_requested, 0);
+    music_thread = SDL_CreateThread(music_thread_proc, "Jill music", job);
     if (music_thread == NULL) {
-        CloseHandle(music_stop_event);
-        music_stop_event = NULL;
         cmf_opl_destroy(player);
         free(job);
         return 0;
     }
-    (void)SetThreadPriority(music_thread, THREAD_PRIORITY_ABOVE_NORMAL);
     return 1;
 }
 
 int host_audio_music_playing(void)
 {
-    return InterlockedCompareExchange(&music_playing, 0, 0) != 0;
+    return SDL_AtomicGet(&music_playing) != 0;
 }

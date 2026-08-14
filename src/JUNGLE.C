@@ -28,12 +28,14 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "COPYFILE.H"
 #include "DESIGN.H"
 #include "GAMECTRL.H"
-#include "HOSTWIN.H"
+#include "HOSTSDL.H"
 #include "KEYBOARD.H"
 #include "MUSIC.H"
 #include "PIXWRITE.H"
 #include "SHM.H"
 #include "WINDOWS.H"
+
+#include <SDL.h>
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -884,7 +886,7 @@ void play(int demo_flag)
         }
 
         if (demo_flag && !macplay) gameover = 1;
-        if (!host_is_open()) gameover = 1; /* Win32 transport boundary. */
+        if (!host_is_open()) gameover = 1; /* SDL transport boundary. */
         while ((word)(*myclock - begclock) < turtle + 1) { }
     } while (!gameover);
 
@@ -1484,11 +1486,11 @@ int main(int argc, char **argv)
     snd_init(sound_path);
     gc_init();
 
-    /* The native window is the Win32 keyboard transport.  Open it before the
+    /* The native window is the SDL keyboard transport.  Open it before the
        original configuration dialog so getkey() receives the same keystrokes
        that DOS read from the BIOS.  --validate is a host-only test path. */
     if (!validate_only &&
-        !host_open("Jill of the Jungle - Press Enter to accept configuration", window_scale)) {
+        !host_open("Jill of the Jungle - SHAREWARE", window_scale)) {
         fprintf(stderr, "Jill recovery: unable to create the game window.\n");
         snd_exit();
         gc_exit();
@@ -1502,7 +1504,7 @@ int main(int argc, char **argv)
     }
 
     if (!validate_only)
-        host_set_title("Jill of the Jungle - Arrows move, Shift jumps, Alt fires");
+        host_set_title("Jill of the Jungle - SHAREWARE");
 
     gr_init();
     clrpal();
