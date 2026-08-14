@@ -38,7 +38,7 @@ char cfg_path[260] = "";
 word nosnd;
 word cfgdemo;
 
-ConfigState cf = { 1, 0, 0, 0, 0, 0, 0, 0, x_vga, 1, 1 };
+ConfigState cf = { 0, 0, 0, 0, 0, 0, 0, 0, x_vga, 1, 1 };
 
 _Static_assert(sizeof(ConfigState) == 22, "configuration record must be 22 bytes");
 
@@ -134,12 +134,14 @@ int doconfig(void)
         fputs("\r\n", stdout);
         fputs("  Press ENTER if this is correct\r\n", stdout);
         fputs("      or press 'C' to configure: ", stdout);
+#if 0 // jmarshall
         do {
             getkey();
             key = (word)toupper(key);
         } while (key != enter && key != 'C' && key != escape);
         if (key == 'C') configure = 1;
         if (key == escape) return 0;
+#endif
     }
 
     if (configure) {

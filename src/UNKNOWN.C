@@ -24,6 +24,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 
 #include "UNKNOWN.H"
 #include "JVOL.H"
+#include "HOSTAUDIO.H"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +37,7 @@ static int sequence_playing;
 static int loop_mode;
 static byte master_volume;
 static byte fm_volume;
+static size_t sequence_length;
 
 int WORX_CALL(byte ah, byte al, uword bx, void *memory, uword di)
 {
@@ -52,20 +54,23 @@ int WORX_CALL(byte ah, byte al, uword bx, void *memory, uword di)
        implementation boundary; the wrappers below retain their exact calls. */
     switch (ah) {
     case 0x01:                         /* DSPReset */
-        WORX_AX = 0;
+        WORX_AX = (word)host_audio_digital_available();
         break;
     case 0x04:                         /* DSPClose */
+        host_audio_stop_voc();
         voc_playing = 0;
         WORX_AX = 1;
         break;
     case 0x06:                         /* PlayVOCBlock */
-        voc_playing = memory != NULL;
+        voc_playing = host_audio_play_voc((const byte *)memory, bx);
         WORX_AX = voc_playing ? 0 : -1;
         break;
     case 0x08:                         /* VOCPlaying */
+        voc_playing = host_audio_voc_playing();
         WORX_AX = (word)voc_playing;
         break;
     case 0x0d:                         /* StopSequence */
+        host_audio_stop_music();
         sequence_playing = 0;
         WORX_AX = 1;
         break;
@@ -95,19 +100,22 @@ int WORX_CALL(byte ah, byte al, uword bx, void *memory, uword di)
         WORX_AX = (word)loop_mode;
         break;
     case 0x1e:                         /* PlayCMFBlock */
-        sequence_playing = memory != NULL;
+        sequence_playing = host_audio_play_cmf((const byte *)memory,
+                                               sequence_length, loop_mode);
         WORX_AX = (word)sequence_playing;
         break;
     case 0x20:                         /* SetMasterVolume */
         master_volume = (byte)bx;
+        host_audio_set_master_volume((byte)(bx >> 4), (byte)(bx & 15));
         WORX_AX = master_volume;
         break;
     case 0x22:                         /* SetFMVolume */
         fm_volume = (byte)bx;
+        host_audio_set_music_volume((byte)(bx >> 4), (byte)(bx & 15));
         WORX_AX = fm_volume;
         break;
     case 0x23:                         /* AdlibDetect */
-        WORX_AX = 0;
+        WORX_AX = (word)host_audio_music_available();
         break;
     }
     return WORX_AX;
@@ -115,6 +123,7 @@ int WORX_CALL(byte ah, byte al, uword bx, void *memory, uword di)
 
 void CloseWorx(void)
 {
+    host_audio_stop();
     CORE_CLOSEWORX();
     if (element_file != NULL) fclose(element_file);
     element_file = NULL;
@@ -166,6 +175,9 @@ char *GetSequence(char *filename)
         block = (char *)malloc((uword)nbytes);
         if (block == NULL) return NULL;
         nbytes = (long)ElementRead(block, (uword)nbytes);
+        sequence_length = (size_t)nbytes;
+    } else {
+        sequence_length = 0;
     }
     return block;
 }
@@ -202,6 +214,7 @@ void SetLoopMode(int mode)
 void StartWorx(void)
 {
     CORE_STARTWORX();
+    (void)host_audio_start();
 }
 
 void StopSequence(void)

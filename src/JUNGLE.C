@@ -37,7 +37,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 
 #include <ctype.h>
 #include <fcntl.h>
-#include <io.h>
+#include "DOSIO.H"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -369,7 +369,11 @@ void loadcfg(void)
         }
         for (index = 0; index < JILL_SAVE_COUNT; ++index)
             save_name[index][0] = '\0';
-        cf.firstthru = 1;
+        cf.firstthru = 0;
+        cf.joyflag0 = 0;
+        cf.video_mode = x_vga;
+        cf.musicflag0 = 1;
+        cf.vocflag0 = 1;
     } else {
         (void)_read(handle, high_name, 120);
         (void)_read(handle, high_score, 40);

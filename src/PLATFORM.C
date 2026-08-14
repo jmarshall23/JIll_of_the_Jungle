@@ -25,8 +25,11 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "RECOVERY.H"
 #include "HOSTWIN.H"
 
+#include <fcntl.h>
+#include <io.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 static volatile uword jill_bios_clock;
 volatile uword *myclock = &jill_bios_clock;
@@ -88,4 +91,13 @@ uint32_t jill_ticks(void)
 {
     if (host_is_open()) return host_ticks();
     return (uint32_t)((uint64_t)clock() * 1000U / CLOCKS_PER_SEC);
+}
+
+int jill_dos_creat(const char *path, int attributes)
+{
+    (void)attributes;
+    if (_access(path, 0) == 0)
+        (void)_chmod(path, _S_IREAD | _S_IWRITE);
+    return _open(path, _O_BINARY | _O_CREAT | _O_TRUNC | _O_WRONLY,
+                 _S_IREAD | _S_IWRITE);
 }

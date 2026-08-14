@@ -25,7 +25,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "GR.H"
 
 #include <fcntl.h>
-#include <io.h>
+#include "DOSIO.H"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
