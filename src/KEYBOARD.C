@@ -37,7 +37,8 @@ int k_pressed(void)
         (void)host_pump();
         return host_peek_key();
     }
-    return 0;
+    /* SDL window close is the host equivalent of cancelling a BIOS key wait. */
+    return 1;
 }
 
 int k_read(void)
@@ -49,7 +50,7 @@ int k_read(void)
         }
         return host_read_key();
     }
-    return 0;
+    return key_escape;
 }
 
 void k_status(void)
