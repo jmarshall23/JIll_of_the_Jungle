@@ -161,6 +161,9 @@ void p_ouch(int healthtake, int diemode);
 void seekplayer(int n, int *dx, int *dy);
 void modjunglescroll(int xd, int yd, int modcode);
 void junglescroll(int xd, int yd);
+#if defined(JILL_EP3)
+void pagedjunglescroll(int xd, int yd);
+#endif
 void refresh(int page_mode);
 void updbkgnd(void);
 void updobjs(int doflag);

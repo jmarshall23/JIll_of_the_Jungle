@@ -47,10 +47,20 @@ This file is part of the Jill of the Jungle Reconstructed Source Code.
 #  define JILL_MENU_MUSIC           "peaks.ddt"
 #  define JILL_SAVE_PREFIX          "jn2save"
 
-#else
+#elif defined(JILL_EP3)
 
-/* Episode 3 is deliberately not configured until its executable is mapped. */
-#  error JILL_EP3 is reserved but Episode 3 has not been reconstructed yet
+#  define JILL_EPISODE_NUMBER       3
+#  define JILL_PROGRAM_NAME         "JILL3"
+#  define JILL_GAME_TITLE           "Jill Saves The Prince"
+#  define JILL_WINDOW_TITLE         "Jill Saves The Prince"
+#  define JILL_CONFIG_FILE          "jill3.cfg"
+#  define JILL_SHAPE_FILE           "jill3.sha"
+#  define JILL_SOUND_FILE           "jill3.vcl"
+#  define JILL_INTRO_LEVEL          "intro.jn3"
+#  define JILL_START_LEVEL          "map.jn3"
+#  define JILL_START_LEVEL_NUMBER   0
+#  define JILL_MENU_MUSIC           "wild.ddt"
+#  define JILL_SAVE_PREFIX          "jn3save"
 
 #endif
 

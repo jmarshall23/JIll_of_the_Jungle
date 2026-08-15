@@ -103,6 +103,26 @@ const char *leveltxt[32] = {
     "26\r", "27\r", "28\r", "29\r",
     "", "", ""
 };
+#elif defined(JILL_EP3)
+const char *leveltxt[32] = {
+    "JILL ENTERS\rTHE\rJUNGLE MAP\r",
+    "JILL ENTERS\rTHE VALLEY\r",
+    "JILL ROAMS\rTHROUGH THE\rVILLAGE\r",
+    "JILL JOURNEYS\rTO THE DAM\r",
+    "JILL DISCOVERS\rTHE SECRET FOREST\r",
+    "JILL BOUNDS INTO\rTHE AERIE\r",
+    "JILL EXPLORES\rTHE AQUEDUCT\r",
+    "JILL BOARDS\rTHE SHIP OF\rTHE GIANT GREEN\rLIZARD MEN!\r",
+    "JILL VENTURES\rINTO THE\rMEGA PUZZLE\r",
+    "JILL JOURNEYS\rINTO THE JAIL\r",
+    "JILL TRYS HER\rLUCK IN THE\rPYRAMID PUZZLE.\r",
+    "JILL LEAPS INTO\rLEVEL ELEVEN\r",
+    "IF YOU THINK THE\rNEXT LEVEL IS\rNUMBER TWELVE,\rYOU'RE RIGHT!\r",
+    "JILL FINALLY\rDISCOVERS\rTHE CASTLE\r",
+    "\r", "\r", "\r", "\r", "\r", "\r", "\r",
+    "21\r", "22\r", "23\r", "24\r", "25\r", "26\r", "27\r", "28\r", "29\r",
+    "", ""
+};
 #endif
 char botmsg[60];
 word botcol, bottime;
@@ -111,7 +131,7 @@ word oldlevelnum;
 word facetable = 24;
 #if defined(JILL_EP1)
 word xbordercol = 1;
-#elif defined(JILL_EP2)
+#elif defined(JILL_EP2) || defined(JILL_EP3)
 word xbordercol = 7;
 #endif
 word xmsgdelay;
@@ -143,6 +163,15 @@ char *demoboard[10] = {
 byte demolvl[10] = { 3, 9, 17, 0, 0, 0, 0, 0, 0, 0 };
 char *demoname[10] = {
     "jn2dem1.mac", "jn2dem2.mac", "jn2dem3.mac", "",
+    "", "", "", "", "", ""
+};
+#elif defined(JILL_EP3)
+char *demoboard[10] = {
+    "1.jn3", "5.jn3", "12.jn3", "", "", "", "", "", "", ""
+};
+byte demolvl[10] = { 1, 5, 12, 0, 0, 0, 0, 0, 0, 0 };
+char *demoname[10] = {
+    "jn3dem1.mac", "jn3dem2.mac", "jn3dem3.mac", "",
     "", "", "", "", "", ""
 };
 #endif
@@ -1417,7 +1446,7 @@ void jmenu(void)
                      "6EPIC'S BBS\r"
                      "4QUIT\r",
                      "PRSIOCDNEQ", 1, 10, 1, 24, 9, 8);
-#elif defined(JILL_EP2)
+#elif defined(JILL_EP2) || defined(JILL_EP3)
         (void)domenu("7PICK A CHOICE:\r"
                      "2PLAY\r"
                      "2RESTORE\r"

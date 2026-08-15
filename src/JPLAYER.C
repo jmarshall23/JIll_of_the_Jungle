@@ -30,6 +30,22 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 
 #include <stdlib.h>
 
+#if defined(JILL_EP3)
+word inv_xfm[11] = { 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0 };
+const char *inv_getmsg[11] = {
+    "FOOF!",
+    "USE KEYS TO OPEN DOORS",
+    "YOU FOUND A KNIFE",
+    "YOU FOUND A GEM",
+    "POOF!",
+    "ZZZZZZZT!",
+    "WHOOSH!",
+    "KABOOM!",
+    "YOU FIND A THROWING STAR",
+    "EXTRA JUMPING POWER",
+    "SHIELD OF INVINCIBILITY"
+};
+#else
 word inv_xfm[11] = { 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0 };
 const char *inv_getmsg[11] = {
     "FOOF!",
@@ -44,6 +60,7 @@ const char *inv_getmsg[11] = {
     "EXTRA JUMPING POWER",
     "SHIELD OF INVINCIBILITY"
 };
+#endif
 
 void calc_scroll(int vertical_delta)
 {

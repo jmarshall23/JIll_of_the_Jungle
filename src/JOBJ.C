@@ -543,7 +543,7 @@ int msg_demon(int n, int msg, int z)
             hitplayer(n);
 #if defined(JILL_EP1)
         } else if (objs[z].objkind == obj_spinblad) {
-#elif defined(JILL_EP2)
+#elif defined(JILL_EP2) || defined(JILL_EP3)
         } else if (kindflags[(byte)objs[z].objkind] & f_weapon) {
 #endif
             if (objs[n].state == 0) {

@@ -154,6 +154,7 @@ endfunction()
 
 add_jill_episode(jill1 JILL_EP1 "${CMAKE_CURRENT_SOURCE_DIR}/../ep1")
 add_jill_episode(jill2 JILL_EP2 "${CMAKE_CURRENT_SOURCE_DIR}/../ep2")
+add_jill_episode(jill3 JILL_EP3 "${CMAKE_CURRENT_SOURCE_DIR}/../ep3")
 
 include(CTest)
 if(BUILD_TESTING)
@@ -168,6 +169,13 @@ if(BUILD_TESTING)
             COMMAND jill2 --validate "${level_name}.JN2")
         set_tests_properties("jill2_validate_${level_test_name}" PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../ep2")
+    endforeach()
+
+    foreach(level_name IN ITEMS intro map 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
+        add_test(NAME "jill3_validate_${level_name}"
+            COMMAND jill3 --validate "${level_name}.jn3")
+        set_tests_properties("jill3_validate_${level_name}" PROPERTIES
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../ep3")
     endforeach()
 endif()
 

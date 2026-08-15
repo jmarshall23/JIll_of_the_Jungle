@@ -23,6 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "JILL.H"
+#include "EPISODE.H"
 #include "MUSIC.H"
 
 #include <stdlib.h>
@@ -309,6 +310,16 @@ void junglescroll(int xd, int yd)
     modjunglescroll(xd, yd, mod_virtual);
 }
 
+#if defined(JILL_EP3)
+void pagedjunglescroll(int xd, int yd)
+{
+    scrollvp(gamevp, -xd, -yd);
+    gamevp->vpox = (word)(gamevp->vpox + xd);
+    gamevp->vpoy = (word)(gamevp->vpoy + yd);
+    modjunglescroll(xd, yd, mod_screen);
+}
+#endif
+
 void refresh(int page_mode)
 {
     byte update_table[boardxs][20];
@@ -326,10 +337,14 @@ void refresh(int page_mode)
             gamevp->vpoy = (word)(gamevp->vpoy - oldscrollyd);
             scroll_x = scrollxd + oldscrollxd;
             scroll_y = scrollyd + oldscrollyd;
+#if defined(JILL_EP3)
+            pagedjunglescroll(scroll_x, scroll_y);
+#else
             scrollvp(gamevp, -scroll_x, -scroll_y);
             gamevp->vpox = (word)(gamevp->vpox + scroll_x);
             gamevp->vpoy = (word)(gamevp->vpoy + scroll_y);
             modjunglescroll(scroll_x, scroll_y, mod_screen);
+#endif
         }
         oldscrollxd = scrollxd;
         oldscrollyd = scrollyd;

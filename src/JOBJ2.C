@@ -66,7 +66,7 @@ int msg_token(int n, int msg, int z)
                     addinv(inventory);
                     killobj(n);
                 }
-#elif defined(JILL_EP2)
+#elif defined(JILL_EP2) || defined(JILL_EP3)
                 addinv(inventory);
                 killobj(n);
 #endif
