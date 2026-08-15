@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(jill1_recovered VERSION 0.1 LANGUAGES C CXX)
+project(jill_recovered VERSION 0.1 LANGUAGES C CXX)
 
 # Jill was a 16-bit DOS program.  This recovery keeps the original 8/16/32-bit
 # data widths, but intentionally targets a flat 32-bit address space.
@@ -112,8 +112,64 @@ if(WIN32)
     list(APPEND JILL_PLATFORM_SOURCES JILL.RC)
 endif()
 
-add_executable(jill1 WIN32 ${JILL_SOURCES} ${JILL_PLATFORM_SOURCES})
-target_compile_features(jill1 PRIVATE c_std_11)
+function(add_jill_episode target_name episode_define output_directory)
+    add_executable(${target_name} WIN32 ${JILL_SOURCES} ${JILL_PLATFORM_SOURCES})
+    target_compile_features(${target_name} PRIVATE c_std_11)
+    target_compile_definitions(${target_name} PRIVATE ${episode_define}=1)
+
+    # Keep each executable beside that episode's original data files.  The
+    # debugger working directory matches the runtime output directory so a
+    # launch from Visual Studio finds the same data as a direct launch.
+    set_target_properties(${target_name} PROPERTIES
+        OUTPUT_NAME "${target_name}"
+        RUNTIME_OUTPUT_DIRECTORY "${output_directory}"
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${output_directory}"
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE "${output_directory}"
+        RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${output_directory}"
+        RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${output_directory}"
+        VS_DEBUGGER_WORKING_DIRECTORY "${output_directory}"
+        VS_GLOBAL_VcpkgEnabled "false"
+        VS_GLOBAL_VcpkgApplocalDeps "false"
+    )
+
+    if(MSVC)
+        target_compile_options(${target_name} PRIVATE /TC /W4 /wd4100 /wd4204)
+        target_compile_definitions(${target_name} PRIVATE
+            _CRT_SECURE_NO_WARNINGS
+            TIMIDITY_STATIC=1
+        )
+    else()
+        target_compile_options(${target_name} PRIVATE -m32 -Wall -Wextra -Wpedantic)
+        target_link_options(${target_name} PRIVATE -m32)
+    endif()
+
+    target_link_libraries(${target_name} PRIVATE
+        SDL2::SDL2main
+        SDL2::SDL2-static
+        OpenAL::OpenAL
+        nuked_opl3
+        timidity
+    )
+endfunction()
+
+add_jill_episode(jill1 JILL_EP1 "${CMAKE_CURRENT_SOURCE_DIR}/../ep1")
+add_jill_episode(jill2 JILL_EP2 "${CMAKE_CURRENT_SOURCE_DIR}/../ep2")
+
+include(CTest)
+if(BUILD_TESTING)
+    add_test(NAME jill1_validate_intro
+        COMMAND jill1 --validate intro.jn1)
+    set_tests_properties(jill1_validate_intro PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../ep1")
+
+    foreach(level_name IN ITEMS 0 1 3 9 10 11 13 15 17 20 INTRO)
+        string(TOLOWER "${level_name}" level_test_name)
+        add_test(NAME "jill2_validate_${level_test_name}"
+            COMMAND jill2 --validate "${level_name}.JN2")
+        set_tests_properties("jill2_validate_${level_test_name}" PROPERTIES
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../ep2")
+    endforeach()
+endif()
 
 # Host-only decoder check.  It is excluded from the normal game build but
 # lets the vendored CMF/OPL path be exercised without opening an audio device.
@@ -144,41 +200,7 @@ target_link_libraries(jill_sfx_validate PRIVATE
     timidity
 )
 
-# Keep the deliverable beside the original Jill data files, regardless of
-# whether a single- or multi-configuration CMake generator is used.
-set_target_properties(jill1 PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/.."
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/.."
-    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_SOURCE_DIR}/.."
-    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_CURRENT_SOURCE_DIR}/.."
-    VS_GLOBAL_VcpkgEnabled "false"
-    VS_GLOBAL_VcpkgApplocalDeps "false"
-)
-
 if(MSVC)
-    target_compile_options(jill1 PRIVATE /TC /W4 /wd4100 /wd4204)
-    target_compile_definitions(jill1 PRIVATE
-        _CRT_SECURE_NO_WARNINGS
-        TIMIDITY_STATIC=1
-    )
-    target_link_libraries(jill1 PRIVATE
-        SDL2::SDL2main
-        SDL2::SDL2-static
-        OpenAL::OpenAL
-        nuked_opl3
-        timidity
-    )
     target_compile_options(jill_cmf_validate PRIVATE /TC /W4)
     target_compile_definitions(jill_cmf_validate PRIVATE _CRT_SECURE_NO_WARNINGS)
-else()
-    target_compile_options(jill1 PRIVATE -m32 -Wall -Wextra -Wpedantic)
-    target_link_options(jill1 PRIVATE -m32)
-    target_link_libraries(jill1 PRIVATE
-        SDL2::SDL2main
-        SDL2::SDL2-static
-        OpenAL::OpenAL
-        nuked_opl3
-        timidity
-    )
 endif()

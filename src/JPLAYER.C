@@ -23,6 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "JILL.H"
+#include "EPISODE.H"
 #include "GAMECTRL.H"
 #include "KEYBOARD.H"
 #include "MUSIC.H"
@@ -273,6 +274,7 @@ int msg_player(int n, int msg, int z)
             player->substate = 0;
         }
 
+#if defined(JILL_EP1)
         if (key == ' ' && invcount(inv_coins)) {
             addobj(obj_token, player->x + player->info1 * 16,
                    player->y + 16);
@@ -286,6 +288,7 @@ int msg_player(int n, int msg, int z)
                 killobj(numobjs - 1);
             }
         }
+#endif
 
         if (fire1) {
             fire1off = 1;

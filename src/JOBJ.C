@@ -23,6 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "JILL.H"
+#include "EPISODE.H"
 #include "GAMECTRL.H"
 #include "MUSIC.H"
 #include "WINDOWS.H"
@@ -511,30 +512,40 @@ int msg_demon(int n, int msg, int z)
         if (++objs[n].counter >= 12)
             objs[n].counter = 0;
 
-        if (!justmove(n, objs[n].x + objs[n].xd,
-                      objs[n].y + objs[n].yd) || rand() % 36 == 0) {
-            if (objs[n].info1 == 0) {
-                pointvect(0, n, &dx, &dy, 4);
-                objs[n].xd = (word)dx;
-                objs[n].yd = (word)dy;
-                shot = addobj(obj_fireball, objs[n].x, objs[n].y);
-                objs[shot].xd = objs[n].xd;
-                objs[shot].yd = objs[n].yd;
-                if (rand() % 2 == 0) {
-                    objs[n].xd = (word)(rand() % 5 - 2);
-                    objs[n].yd = (word)(rand() % 5 - 2);
-                } else {
-                    objs[n].xd /= 2;
-                    objs[n].yd /= 2;
-                }
+        if ((!justmove(n, objs[n].x + objs[n].xd,
+                       objs[n].y + objs[n].yd) || rand() % 36 == 0)
+#if defined(JILL_EP1)
+            && objs[n].info1 == 0
+#endif
+        ) {
+            pointvect(0, n, &dx, &dy, 4);
+            objs[n].xd = (word)dx;
+            objs[n].yd = (word)dy;
+            shot = addobj(obj_fireball, objs[n].x, objs[n].y);
+            objs[shot].xd = objs[n].xd;
+            objs[shot].yd = objs[n].yd;
+            if (rand() % 2 == 0) {
+                objs[n].xd = (word)(rand() % 5 - 2);
+                objs[n].yd = (word)(rand() % 5 - 2);
+            } else {
+                objs[n].xd /= 2;
+                objs[n].yd /= 2;
             }
         }
         objs[n].state -= objs[n].state > 0;
         return 1;
     } else if (msg == msg_touch) {
-        if (z == 0 && objs[n].info1 == 0) {
+        if (z == 0
+#if defined(JILL_EP1)
+            && objs[n].info1 == 0
+#endif
+        ) {
             hitplayer(n);
+#if defined(JILL_EP1)
         } else if (objs[z].objkind == obj_spinblad) {
+#elif defined(JILL_EP2)
+        } else if (kindflags[(byte)objs[z].objkind] & f_weapon) {
+#endif
             if (objs[n].state == 0) {
                 if (++objs[n].statecount > 5) {
                     explode2(n);
@@ -588,7 +599,11 @@ int msg_roman(int n, int msg, int z)
                   (objs[n].xd > 0 ? 8 : 0) + objs[n].counter,
                   objs[n].x, objs[n].y);
     } else if (msg == msg_touch) {
-        if (z == 0 && objs[n].info1 == 0) hitplayer(n);
+        if (z == 0
+#if defined(JILL_EP1)
+            && objs[n].info1 == 0
+#endif
+        ) hitplayer(n);
     } else if (msg == msg_update) {
         objs[n].counter = (word)((objs[n].counter + 1) & 7);
         if (rand() % 30 == 0) {
@@ -842,6 +857,8 @@ int msg_falldoor(int n, int msg, int z)
 
 void initobjinfo(void)
 {
+    /* JILL2.EXE's stripped initobjinfo assigns the same 69 dimensions,
+       flags, shape tables, scores, and handler relationships as Episode 1. */
     static const char *const names[numobjkinds] = {
         "PLAYER","APPLE","KNIFE","KILLME","BIGANT","FLY","MACROTRIG","DEMON","BUNNY",
         "INCHWORM","ZAPPER","BOBSLUG","CHECKPT","PAUL","KEY","PAD","WISEMAN","ROMAN",

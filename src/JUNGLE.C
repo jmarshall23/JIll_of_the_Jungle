@@ -27,6 +27,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "CONFIG.H"
 #include "COPYFILE.H"
 #include "DESIGN.H"
+#include "EPISODE.H"
 #include "GAMECTRL.H"
 #include "HOSTSDL.H"
 #include "KEYBOARD.H"
@@ -59,6 +60,7 @@ vptype *statvp = &ourwin.botleft;
 word scrnxs = normxs, scrnys = normys;
 uword bd[boardxs][boardys];
 char newlevel[32], curlevel[32];
+#if defined(JILL_EP1)
 const char *leveltxt[32] = {
     "JILL ENTERS\rTHE\rJUNGLE MAP.\r",
     "JILL BOUNDS\rTHROUGH\rTHE BOULDERS\r",
@@ -80,16 +82,42 @@ const char *leveltxt[32] = {
     "21\r", "22\r", "23\r", "24\r", "25\r", "26\r", "27\r", "28\r", "29\r",
     "", ""
 };
+#elif defined(JILL_EP2)
+const char *leveltxt[32] = {
+    "JILL GOES\rUNDERGROUND\r",
+    "",
+    "JILL ENTERS\rMONTEZUMA'S\rCASTLE\r",
+    "\r", "\r", "\r", "\r", "\r",
+    "JILL DESCENDS\rINTO THE\rDEPTHS OF\rHECK\r",
+    "JILL RUNS INTO\rTHE RED PUZZLE\r",
+    "JILL SWIMS TO\rTHE WATERWORLD\r",
+    "\r",
+    "JILL DRIFTS\rINTO THE\rDEMONIC MAZE\r",
+    "JILL BOUNDS\rINTO\rTHE BONUS LEVEL\r",
+    "JILL WANDERS\rINTO THE LAND\rOF ETERNAL\rWEIRDNESS\r",
+    "JILL JUMPS\rINTO A STICKY\rSITUATION\r",
+    "JILL BETTER\rTHINK FAST!\r",
+    "\r", "\r",
+    "JILL ESCAPES\rTHE UNDERGROUND\r",
+    "21\r", "22\r", "23\r", "24\r", "25\r",
+    "26\r", "27\r", "28\r", "29\r",
+    "", "", ""
+};
+#endif
 char botmsg[60];
 word botcol, bottime;
 char oursong[32], tempname[64];
 word oldlevelnum;
 word facetable = 24;
+#if defined(JILL_EP1)
 word xbordercol = 1;
+#elif defined(JILL_EP2)
+word xbordercol = 7;
+#endif
 word xmsgdelay;
 word debug, turtle, xdemoflag;
 word levelmsgclock;
-char xshafile[] = "jill1.sha";
+char xshafile[] = JILL_SHAPE_FILE;
 word inv_shape[11] = {
     0x0026, 0x000c, 0x000d, 0x000b, 0x000e, 0x000f,
     0x0012, 0x0014, 0x0023, 0x0024, 0x0025
@@ -100,6 +128,7 @@ static ulongword high_score[JILL_HIGH_COUNT];
 static char save_name[JILL_SAVE_COUNT][JILL_SAVE_NAME_LEN];
 static int selected_save;
 
+#if defined(JILL_EP1)
 char *demoboard[10] = {
     "intro.jn1", "", "", "", "", "", "", "", "", ""
 };
@@ -107,6 +136,16 @@ byte demolvl[10] = { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 char *demoname[10] = {
     "jn1demo.mac", "", "", "", "", "", "", "", "", ""
 };
+#elif defined(JILL_EP2)
+char *demoboard[10] = {
+    "3.jn2", "9.jn2", "17.jn2", "", "", "", "", "", "", ""
+};
+byte demolvl[10] = { 3, 9, 17, 0, 0, 0, 0, 0, 0, 0 };
+char *demoname[10] = {
+    "jn2dem1.mac", "jn2dem2.mac", "jn2dem3.mac", "",
+    "", "", "", "", "", ""
+};
+#endif
 word demonum;
 
 static void set_game_layout(void);
@@ -362,7 +401,7 @@ void loadcfg(void)
     int handle;
     int index;
 
-    data_path(path, sizeof(path), "JILL1.CFG");
+    data_path(path, sizeof(path), JILL_CONFIG_FILE);
     handle = _open(path, _O_BINARY | _O_RDONLY);
     if (handle < 0 || _filelength(handle) <= 0) {
         for (index = 0; index < JILL_HIGH_COUNT; ++index) {
@@ -390,7 +429,7 @@ void savecfg(void)
     char path[64];
     int handle;
 
-    data_path(path, sizeof(path), "JILL1.CFG");
+    data_path(path, sizeof(path), JILL_CONFIG_FILE);
     handle = _creat(path, 0);
     if (handle >= 0) {
         (void)_write(handle, high_name, 120);
@@ -915,8 +954,8 @@ void pleasewait(void)
         wprint(&waitwin.inside, 48, 39, 2, "Tim Sweeney");
         fontcolor(&waitwin.inside, 2, -1);
         wprint(&waitwin.inside,
-               (waitwin.inside.vpxl - (int)strlen("Jill of the Jungle") * 8) / 2,
-               21, 1, "Jill of the Jungle");
+               (waitwin.inside.vpxl - (int)strlen(JILL_GAME_TITLE) * 8) / 2,
+               21, 1, JILL_GAME_TITLE);
         fontcolor(&mainvp, 1, 0);
         wprint(&mainvp, 64, 160, 2, "NOW LOADING, PLEASE WAIT...");
 
@@ -1084,10 +1123,10 @@ int loadgame(void)
     if (slot < 0 || save_name[slot][0] == '\0') return 0;
 
     _itoa(slot, suffix, 10);
-    data_path(savefile, sizeof(savefile), "jn1save");
+    data_path(savefile, sizeof(savefile), JILL_SAVE_PREFIX);
     strcat(savefile, ".");
     strcat(savefile, suffix);
-    data_path(mapfile, sizeof(mapfile), "jn1save");
+    data_path(mapfile, sizeof(mapfile), JILL_SAVE_PREFIX);
     strcat(mapfile, "m.");
     strcat(mapfile, suffix);
 
@@ -1117,10 +1156,10 @@ void savegame(void)
     strcpy(save_name[slot], name);
 
     _itoa(slot, suffix, 10);
-    data_path(savefile, sizeof(savefile), "jn1save");
+    data_path(savefile, sizeof(savefile), JILL_SAVE_PREFIX);
     strcat(savefile, ".");
     strcat(savefile, suffix);
-    data_path(mapfile, sizeof(mapfile), "jn1save");
+    data_path(mapfile, sizeof(mapfile), JILL_SAVE_PREFIX);
     strcat(mapfile, "m.");
     strcat(mapfile, suffix);
 
@@ -1144,7 +1183,7 @@ void drawgamewin(void)
     fontcolor(gamevp, 7, 8);
     clearvp(gamevp);
     fontcolor(&ourwin.border, xbordercol, -1);
-    titlewin(&ourwin, "Jill of the Jungle");
+    titlewin(&ourwin, JILL_GAME_TITLE);
     titlebot(&ourwin, "INVENTORY");
     titletop(&ourwin, "CONTROLS");
 }
@@ -1344,7 +1383,7 @@ void jmenu(void)
     int quit = 0;
     int c;
 
-    loadboard("intro.jn1");
+    loadboard(JILL_INTRO_LEVEL);
     while (host_is_open() && !quit) {
         setpagemode(1);
         setorigin();
@@ -1365,6 +1404,7 @@ void jmenu(void)
         pageflip();
         setpagemode(0);
 
+#if defined(JILL_EP1)
         (void)domenu("7PICK A CHOICE:\r"
                      "2PLAY\r"
                      "2RESTORE\r"
@@ -1377,6 +1417,19 @@ void jmenu(void)
                      "6EPIC'S BBS\r"
                      "4QUIT\r",
                      "PRSIOCDNEQ", 1, 10, 1, 24, 9, 8);
+#elif defined(JILL_EP2)
+        (void)domenu("7PICK A CHOICE:\r"
+                     "2PLAY\r"
+                     "2RESTORE\r"
+                     "5STORY\r"
+                     "5INSTRUCTIONS\r"
+                     "5ORDERING INFO\r"
+                     "5CREDITS\r"
+                     "3DEMO\r"
+                     "3NOISEMAKER\r"
+                     "4QUIT\r",
+                     "PRSIOCDNQ", 1, 9, 1, 24, 9, 8);
+#endif
         setpagemode(0);
 
         if (key == key_escape || key == 'Q') {
@@ -1387,16 +1440,16 @@ void jmenu(void)
             fout();
             drawgamewin();
             drawcmds();
-            loadboard("map.jn1");
-            pl.level = 127;
+            loadboard(JILL_START_LEVEL);
+            pl.level = JILL_START_LEVEL_NUMBER;
             p_reenter(0);
             drawboard();
             pageflip();
             setpagemode(0);
             fin();
             play(0);
-            sb_playtune("funky.ddt");
-            loadboard("intro.jn1");
+            sb_playtune(JILL_MENU_MUSIC);
+            loadboard(JILL_INTRO_LEVEL);
         } else if (key == 0x10) {
             setpagemode(1);
             drawgamewin();
@@ -1420,8 +1473,8 @@ void jmenu(void)
                 setpagemode(0);
                 fin();
                 play(0);
-                sb_playtune("funky.ddt");
-                loadboard("intro.jn1");
+                sb_playtune(JILL_MENU_MUSIC);
+                loadboard(JILL_INTRO_LEVEL);
             }
         } else if (key == 'S') {
             pageview(0);
@@ -1431,12 +1484,14 @@ void jmenu(void)
             pageview(8);
         } else if (key == 'C') {
             pageview(12);
+#if defined(JILL_EP1)
         } else if (key == 'E') {
             pageview(20);
+#endif
         } else if (key == 'D') {
             dodemo();
-            sb_playtune("funky.ddt");
-            loadboard("intro.jn1");
+            sb_playtune(JILL_MENU_MUSIC);
+            loadboard(JILL_INTRO_LEVEL);
         } else if (key == 'N') {
             pageview(99);
         } else if (key == 5) {
@@ -1481,8 +1536,8 @@ int main(int argc, char **argv)
     data_path(tempname, sizeof(tempname), "temp");
     (void)loadcfg();
     cfg_init(argc, argv);
-    data_path(shape_path, sizeof(shape_path), "JILL1.SHA");
-    data_path(sound_path, sizeof(sound_path), "JILL1.VCL");
+    data_path(shape_path, sizeof(shape_path), JILL_SHAPE_FILE);
+    data_path(sound_path, sizeof(sound_path), JILL_SOUND_FILE);
     snd_init(sound_path);
     gc_init();
 
@@ -1490,7 +1545,7 @@ int main(int argc, char **argv)
        original configuration dialog so getkey() receives the same keystrokes
        that DOS read from the BIOS.  --validate is a host-only test path. */
     if (!validate_only &&
-        !host_open("Jill of the Jungle - SHAREWARE", window_scale)) {
+        !host_open(JILL_WINDOW_TITLE, window_scale)) {
         fprintf(stderr, "Jill recovery: unable to create the game window.\n");
         snd_exit();
         gc_exit();
@@ -1504,7 +1559,7 @@ int main(int argc, char **argv)
     }
 
     if (!validate_only)
-        host_set_title("Jill of the Jungle - SHAREWARE");
+        host_set_title(JILL_WINDOW_TITLE);
 
     gr_init();
     clrpal();
@@ -1517,7 +1572,7 @@ int main(int argc, char **argv)
         initobjinfo();
         initboard();
         initobjs();
-        if (level == NULL) level = "intro.jn1";
+        if (level == NULL) level = JILL_INTRO_LEVEL;
         loadboard(level);
         printf("Jill recovery: loaded %s (%d objects, level %d, score %lu)\n",
                curlevel, (int)numobjs, (int)pl.level, (unsigned long)pl.score);
@@ -1533,7 +1588,7 @@ int main(int argc, char **argv)
     memcpy(old_palette, vgapal, sizeof(old_palette));
     pleasewait();
     snd_do();
-    sb_playtune("funky.ddt");
+    sb_playtune(JILL_MENU_MUSIC);
     shm_want[3] = 1;
     shm_want[4] = 1;
     shm_want[5] = 1;

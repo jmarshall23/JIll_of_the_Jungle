@@ -23,6 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "JILL.H"
+#include "EPISODE.H"
 #include "GAMECTRL.H"
 #include "MUSIC.H"
 
@@ -44,9 +45,11 @@ int msg_token(int n, int msg, int z)
         drawshape(gamevp, 0x0e00 + inv_shape[inventory],
                   objs[n].x, objs[n].y);
     } else if (msg == msg_update) {
+#if defined(JILL_EP1)
         if (inventory == inv_coins) {
             if (trymove(n, objs[n].x, objs[n].y + 1)) return 1;
         }
+#endif
         return 0;
     } else if (msg == msg_touch) {
         if (z == 0) {
@@ -58,16 +61,23 @@ int msg_token(int n, int msg, int z)
                     putbotmsg(inv_getmsg[inventory], 7);
                 }
                 snd_play(3, 25);
+#if defined(JILL_EP1)
                 if (inventory != inv_coins || !invcount(inv_coins)) {
                     addinv(inventory);
                     killobj(n);
                 }
+#elif defined(JILL_EP2)
+                addinv(inventory);
+                killobj(n);
+#endif
             }
             statmodflg |= mod_screen;
+#if defined(JILL_EP1)
         } else if (objs[z].objkind == obj_mapdemo ||
                    objs[z].objkind == obj_demon) {
             killobj(n);
             objs[z].info1 = 1;
+#endif
         }
     }
     return 0;

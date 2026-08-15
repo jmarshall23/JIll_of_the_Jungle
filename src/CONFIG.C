@@ -23,6 +23,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 */
 
 #include "CONFIG.H"
+#include "EPISODE.H"
 #include "GAMECTRL.H"
 #include "GR.H"
 #include "HOSTSDL.H"
@@ -59,9 +60,9 @@ void cfg_init(int argc, char **argv)
     host_console_clear();
     fputs("\r\n\r\nDetecting your hardward...\r\n", stdout);
     fputs("\r\nIf your system locks, reboot and type:\r\n", stdout);
-    fputs("   JILL1 /NOSB  (No Sound Blaster card)\r\n", stdout);
-    fputs("   JILL1 /SB    (With a Sound Blaster)\r\n", stdout);
-    fputs("   JILL1 /NOSND (If all else fails)\r\n", stdout);
+    fputs("   " JILL_PROGRAM_NAME " /NOSB  (No Sound Blaster card)\r\n", stdout);
+    fputs("   " JILL_PROGRAM_NAME " /SB    (With a Sound Blaster)\r\n", stdout);
+    fputs("   " JILL_PROGRAM_NAME " /NOSND (If all else fails)\r\n", stdout);
     readspeed();
     for (index = 0; index < argc; ++index) {
         _strupr(argv[index]);
