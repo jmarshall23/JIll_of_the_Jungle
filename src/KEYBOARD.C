@@ -76,7 +76,7 @@ void k_status(void)
 
 void installhandler(byte status)
 {
-    memset((void *)keydown, sizeof(keydown), 0);
+    memset((void *)keydown, 0, sizeof(keydown));
     bioscall = status;
 }
 

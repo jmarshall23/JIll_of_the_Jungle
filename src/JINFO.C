@@ -24,8 +24,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 
 #include "JILL.H"
 
-#include <fcntl.h>
-#include <io.h>
+
 #include <stdlib.h>
 
 infotype info[numinfotypes];

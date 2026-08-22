@@ -2,7 +2,7 @@
 #ifndef JILL_DOSIO_H
 #define JILL_DOSIO_H
 
-#include <io.h>
+#include "HOSTCOMPAT.H"
 
 int jill_dos_creat(const char *path, int attributes);
 
