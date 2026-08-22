@@ -22,19 +22,144 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 ===========================================================================
 */
 
+#include "HOSTCOMPAT.H"
 #include "RECOVERY.H"
 #include "HOSTSDL.H"
 
 #include <fcntl.h>
-#include <io.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
+
+#if !defined(_WIN32)
+#include <dirent.h>
+#include <errno.h>
+#include <stdarg.h>
+#endif
 
 static volatile uword jill_bios_clock;
 volatile uword *myclock = &jill_bios_clock;
 volatile longword longclock;
-#include <time.h>
+
+#if !defined(_WIN32)
+#define JILL_HOST_PATH_MAX 4096
+
+static int jill_resolve_case_path(const char *path, char *resolved, size_t capacity)
+{
+    char directory[JILL_HOST_PATH_MAX];
+    const char *name;
+    const char *slash;
+    DIR *dir;
+    struct dirent *entry;
+    int found = 0;
+
+    if (path == NULL || resolved == NULL || capacity == 0) return 0;
+    slash = strrchr(path, '/');
+    if (slash == NULL) {
+        strcpy(directory, ".");
+        name = path;
+    } else {
+        size_t length = (size_t)(slash - path);
+        if (length == 0) {
+            strcpy(directory, "/");
+        } else {
+            if (length >= sizeof(directory)) return 0;
+            memcpy(directory, path, length);
+            directory[length] = '\0';
+        }
+        name = slash + 1;
+    }
+
+    if (*name == '\0') return 0;
+    dir = opendir(directory);
+    if (dir == NULL) return 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+        int written;
+        if (strcasecmp(entry->d_name, name) != 0) continue;
+        if (strcmp(directory, ".") == 0)
+            written = snprintf(resolved, capacity, "%s", entry->d_name);
+        else if (strcmp(directory, "/") == 0)
+            written = snprintf(resolved, capacity, "/%s", entry->d_name);
+        else
+            written = snprintf(resolved, capacity, "%s/%s", directory, entry->d_name);
+        found = written >= 0 && (size_t)written < capacity;
+        break;
+    }
+
+    closedir(dir);
+    return found;
+}
+
+static int jill_posix_open(const char *path, int flags, mode_t mode, int has_mode)
+{
+    return has_mode ? open(path, flags, mode) : open(path, flags);
+}
+
+int jill_host_open(const char *path, int flags, ...)
+{
+    char resolved[JILL_HOST_PATH_MAX];
+    mode_t mode = 0;
+    int has_mode = (flags & O_CREAT) != 0;
+    int result;
+    int saved_errno;
+
+    if (has_mode) {
+        va_list arguments;
+        va_start(arguments, flags);
+        mode = (mode_t)va_arg(arguments, int);
+        va_end(arguments);
+
+        /* DOS/Windows would reopen an existing file regardless of case. */
+        if (jill_resolve_case_path(path, resolved, sizeof(resolved)))
+            return jill_posix_open(resolved, flags, mode, 1);
+    }
+
+    result = jill_posix_open(path, flags, mode, has_mode);
+    if (result >= 0 || errno != ENOENT) return result;
+
+    saved_errno = errno;
+    if (!jill_resolve_case_path(path, resolved, sizeof(resolved))) {
+        errno = saved_errno;
+        return -1;
+    }
+    return jill_posix_open(resolved, flags, mode, has_mode);
+}
+
+long jill_host_filelength(int fd)
+{
+    struct stat status;
+    if (fstat(fd, &status) != 0) return -1;
+    return (long)status.st_size;
+}
+#endif
+
+FILE *jill_fopen(const char *path, const char *mode)
+{
+#if defined(_WIN32)
+    return fopen(path, mode);
+#else
+    char resolved[JILL_HOST_PATH_MAX];
+    FILE *file;
+    int saved_errno;
+
+    /* For creating/appending files, prefer an existing case-insensitive match. */
+    if (mode != NULL && mode[0] != 'r' &&
+        jill_resolve_case_path(path, resolved, sizeof(resolved)))
+        return fopen(resolved, mode);
+
+    file = fopen(path, mode);
+    if (file != NULL || errno != ENOENT) return file;
+
+    saved_errno = errno;
+    if (!jill_resolve_case_path(path, resolved, sizeof(resolved))) {
+        errno = saved_errno;
+        return NULL;
+    }
+    return fopen(resolved, mode);
+#endif
+}
 
 uword jill_read_u16_le(const byte *source)
 {

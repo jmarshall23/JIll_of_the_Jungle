@@ -34,7 +34,7 @@ void drawcmds(void);
 void loadcfg(void);
 void savecfg(void);
 int numlines(void);
-int getline(int number, char *line, int add_spaces);
+int jill_getline(int number, char *line, int add_spaces);
 void printline(vptype *viewport, int y, int number);
 void ourdelay(void);
 void initboard(void);

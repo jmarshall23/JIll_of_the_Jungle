@@ -2,13 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(jill_recovered VERSION 0.1 LANGUAGES C CXX)
 
-# Jill was a 16-bit DOS program.  This recovery keeps the original 8/16/32-bit
-# data widths, but intentionally targets a flat 32-bit address space.
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
-    message(FATAL_ERROR
-        "Jill recovery must be configured for a 32-bit target. "
-        "With Visual Studio use: cmake -S src -B build -A Win32")
-endif()
+# Jill was a 16-bit DOS program.  Serialized game data keeps its original
+# 8/16/32-bit widths, while host pointers use the native platform width.
 
 # SDL2 owns the native window, renderer, keyboard, timer, and host threads.
 # Build only its static library and SDL2main so the game remains a single EXE.
@@ -20,8 +15,8 @@ set(SDL2_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
 add_subdirectory(thirdparty/SDL2 EXCLUDE_FROM_ALL)
 
 # The audio boundary uses a vendored, statically linked OpenAL Soft.
-# Only WASAPI playback is required by Jill; tools, examples, installation
-# rules, capture-only legacy backends, and loadable OpenAL modules are omitted.
+# Tools, examples, installation rules, and loadable OpenAL modules are omitted.
+# Use the native OpenAL Soft playback backend for each host platform.
 set(LIBTYPE STATIC CACHE STRING "Build OpenAL Soft statically" FORCE)
 set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
 set(ALSOFT_NO_CONFIG_UTIL ON CACHE BOOL "" FORCE)
@@ -35,9 +30,11 @@ set(ALSOFT_INSTALL_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ALSOFT_INSTALL_UTILS OFF CACHE BOOL "" FORCE)
 set(ALSOFT_ENABLE_MODULES OFF CACHE BOOL "" FORCE)
 set(ALSOFT_EAX OFF CACHE BOOL "" FORCE)
-set(ALSOFT_BACKEND_WASAPI ON CACHE BOOL "" FORCE)
-set(ALSOFT_BACKEND_DSOUND OFF CACHE BOOL "" FORCE)
-set(ALSOFT_BACKEND_WINMM OFF CACHE BOOL "" FORCE)
+if(WIN32)
+    set(ALSOFT_BACKEND_WASAPI ON CACHE BOOL "" FORCE)
+    set(ALSOFT_BACKEND_DSOUND OFF CACHE BOOL "" FORCE)
+    set(ALSOFT_BACKEND_WINMM OFF CACHE BOOL "" FORCE)
+endif()
 set(ALSOFT_BACKEND_WAVE OFF CACHE BOOL "" FORCE)
 add_subdirectory(thirdparty/openal-soft EXCLUDE_FROM_ALL)
 
@@ -113,7 +110,11 @@ if(WIN32)
 endif()
 
 function(add_jill_episode target_name episode_define output_directory)
-    add_executable(${target_name} WIN32 ${JILL_SOURCES} ${JILL_PLATFORM_SOURCES})
+    if(WIN32)
+        add_executable(${target_name} WIN32 ${JILL_SOURCES} ${JILL_PLATFORM_SOURCES})
+    else()
+        add_executable(${target_name} ${JILL_SOURCES} ${JILL_PLATFORM_SOURCES})
+    endif()    
     target_compile_features(${target_name} PRIVATE c_std_11)
     target_compile_definitions(${target_name} PRIVATE ${episode_define}=1)
 
@@ -139,12 +140,12 @@ function(add_jill_episode target_name episode_define output_directory)
             TIMIDITY_STATIC=1
         )
     else()
-        target_compile_options(${target_name} PRIVATE -m32 -Wall -Wextra -Wpedantic)
-        target_link_options(${target_name} PRIVATE -m32)
+        target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic)
     endif()
-
+    if(TARGET SDL2::SDL2main)
+        target_link_libraries(${target_name} PRIVATE SDL2::SDL2main)
+    endif()
     target_link_libraries(${target_name} PRIVATE
-        SDL2::SDL2main
         SDL2::SDL2-static
         OpenAL::OpenAL
         nuked_opl3
@@ -179,36 +180,64 @@ if(BUILD_TESTING)
     endforeach()
 endif()
 
-# Host-only decoder check.  It is excluded from the normal game build but
-# lets the vendored CMF/OPL path be exercised without opening an audio device.
-add_executable(jill_cmf_validate EXCLUDE_FROM_ALL
-    tools/CMF_VALIDATE.C
-    CMFOPL.C
-)
-set_source_files_properties(tools/CMF_VALIDATE.C CMFOPL.C PROPERTIES LANGUAGE C)
-target_compile_features(jill_cmf_validate PRIVATE c_std_11)
-target_link_libraries(jill_cmf_validate PRIVATE nuked_opl3)
+# Optional host-only decoder validation tools.
+# Some source distributions do not include these files.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/CMF_VALIDATE.C")
+    add_executable(jill_cmf_validate EXCLUDE_FROM_ALL
+        tools/CMF_VALIDATE.C
+        CMFOPL.C
+    )
 
-add_executable(jill_sfx_validate EXCLUDE_FROM_ALL
-    tools/SFX_VALIDATE.C
-    HOSTAUDIO.C
-    CMFOPL.C
-)
-set_source_files_properties(tools/SFX_VALIDATE.C PROPERTIES LANGUAGE C)
-target_compile_features(jill_sfx_validate PRIVATE c_std_11)
-target_include_directories(jill_sfx_validate PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-target_compile_definitions(jill_sfx_validate PRIVATE
-    _CRT_SECURE_NO_WARNINGS
-    TIMIDITY_STATIC=1
-)
-target_link_libraries(jill_sfx_validate PRIVATE
-    SDL2::SDL2-static
-    OpenAL::OpenAL
-    nuked_opl3
-    timidity
-)
+    set_source_files_properties(
+        tools/CMF_VALIDATE.C
+        CMFOPL.C
+        PROPERTIES LANGUAGE C
+    )
 
-if(MSVC)
-    target_compile_options(jill_cmf_validate PRIVATE /TC /W4)
-    target_compile_definitions(jill_cmf_validate PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_features(jill_cmf_validate PRIVATE c_std_11)
+    target_link_libraries(jill_cmf_validate PRIVATE nuked_opl3)
+
+    if(MSVC)
+        target_compile_options(jill_cmf_validate PRIVATE /TC /W4)
+        target_compile_definitions(
+            jill_cmf_validate
+            PRIVATE _CRT_SECURE_NO_WARNINGS
+        )
+    endif()
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/SFX_VALIDATE.C")
+    add_executable(jill_sfx_validate EXCLUDE_FROM_ALL
+        tools/SFX_VALIDATE.C
+        HOSTAUDIO.C
+        CMFOPL.C
+    )
+
+    set_source_files_properties(
+        tools/SFX_VALIDATE.C
+        PROPERTIES LANGUAGE C
+    )
+
+    target_compile_features(jill_sfx_validate PRIVATE c_std_11)
+
+    target_include_directories(
+        jill_sfx_validate
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+
+    target_compile_definitions(
+        jill_sfx_validate
+        PRIVATE
+            _CRT_SECURE_NO_WARNINGS
+            TIMIDITY_STATIC=1
+    )
+
+    target_link_libraries(
+        jill_sfx_validate
+        PRIVATE
+            SDL2::SDL2-static
+            OpenAL::OpenAL
+            nuked_opl3
+            timidity
+    )
 endif()

@@ -25,6 +25,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "UNKNOWN.H"
 #include "JVOL.H"
 #include "HOSTAUDIO.H"
+#include "HOSTCOMPAT.H"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,7 +77,7 @@ int WORX_CALL(byte ah, byte al, uword bx, void *memory, uword di)
         break;
     case 0x17:                         /* OpenElement */
         if (element_file != NULL) fclose(element_file);
-        element_file = memory != NULL ? fopen((const char *)memory, "rb") : NULL;
+        element_file = memory != NULL ? jill_fopen((const char *)memory, "rb") : NULL;
         if (element_file == NULL || fseek(element_file, 0, SEEK_END) != 0) {
             WORX_AX = -1;
             WORX_DX = -1;

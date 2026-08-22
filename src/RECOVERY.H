@@ -25,6 +25,8 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #ifndef JILL_RECOVERY_H
 #define JILL_RECOVERY_H
 
+#include "HOSTCOMPAT.H"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -52,7 +54,6 @@ typedef uint32_t ulongword;
 _Static_assert(sizeof(byte) == 1, "byte must be 8-bit");
 _Static_assert(sizeof(word) == 2, "word must be 16-bit");
 _Static_assert(sizeof(longword) == 4, "longword must be 32-bit");
-_Static_assert(sizeof(void *) == 4, "the recovered program requires 32-bit pointers");
 #endif
 
 uword jill_read_u16_le(const byte *source);
@@ -64,7 +65,7 @@ int jill_random(int limit);
 void jill_delay(unsigned milliseconds);
 uint32_t jill_ticks(void);
 
-/* Win32 emulation of the BIOS timer word at 0040:006c. */
+/* Host emulation of the BIOS timer word at 0040:006c. */
 extern volatile uword *myclock;
 extern volatile longword longclock;
 

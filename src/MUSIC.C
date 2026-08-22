@@ -24,9 +24,8 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 
 #include "MUSIC.H"
 #include "UNKNOWN.H"
+#include "HOSTCOMPAT.H"
 
-#include <fcntl.h>
-#include <io.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -176,12 +175,23 @@ void snd_init(char *path)
         vocnum[index] = -1;
         vocused[index] = 0;
     }
-    for (index = 0; index < SOUNDMAC_COUNT; ++index) soundmac[index] = NULL;
+    for (index = 0; index < SOUNDMAC_COUNT; ++index)
+        soundmac[index] = NULL;
 
-    StartWorx();
-    /* getvect/setvect for WorxBugInt8 are real-mode interrupt boundaries. */
-    if (musicflag) musicflag = (word)AdlibDetect();
-    if (!musicflag) vocflag = 0;
+    /*
+    * Do not initialize the host audio backend when sound has
+    * explicitly been disabled.
+    */
+    if (!nosnd && (musicflag || vocflag)) {
+        StartWorx();
+
+        /* getvect/setvect for WorxBugInt8 are real-mode interrupt boundaries. */
+        if (musicflag)
+            musicflag = (word)AdlibDetect();
+
+        if (!musicflag)
+            vocflag = 0;
+    }
     if (*path == '\0') {
         vocflag = 0;
         return;
@@ -226,9 +236,19 @@ void snd_do(void)
     word size;
     int handle;
 
+    if (nosnd) {
+        clockrate = 1;
+        soundoff = 1;
+        musicflag = 0;
+        vocflag = 0;
+        return;
+    }
+
     /* nosound(): direct PC-speaker hardware call omitted at the host boundary. */
-    if (nosnd || musicflag || vocflag) clockrate = 0;
-    else if (!vocflag) clockrate = 64;
+    if (musicflag || vocflag)
+        clockrate = 0;
+    else if (!vocflag)
+        clockrate = 64;
 
     if (musicflag) (void)SetFMVolume(15, 15);
     if (vocflag) {

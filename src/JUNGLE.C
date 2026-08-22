@@ -190,7 +190,7 @@ static void data_path(char *destination, size_t capacity, const char *name)
         length = strlen(destination);
         if (length != 0 && destination[length - 1] != '\\' && destination[length - 1] != '/' &&
             length + 1 < capacity) {
-            destination[length++] = '\\';
+            destination[length++] = JILL_PATH_SEPARATOR;
             destination[length] = '\0';
         }
     }
@@ -484,7 +484,7 @@ void loadboard(const char *filename)
     shm_want[46] = 1;
     strcpy(curlevel, filename);
     zapobjs();
-    file = fopen(filename, "rb");
+    file = jill_fopen(filename, "rb");
     if (file == NULL || fread(board_image, 1, sizeof(board_image), file) == 0) rexit(1);
     if (fread(&disk_object_count, 1, 2, file) == 0) rexit(2);
     if (disk_object_count > maxobjs) rexit(3);
@@ -562,7 +562,7 @@ int numlines(void)
     return lines;
 }
 
-int getline(int number, char *line, int add_spaces)
+int jill_getline(int number, char *line, int add_spaces)
 {
     int color = 7, current = 0, source = 0, output = 0;
     line[0] = '\0';
@@ -582,7 +582,7 @@ int getline(int number, char *line, int add_spaces)
 void printline(vptype *viewport, int y, int number)
 {
     char line[80];
-    fontcolor(viewport, getline(number, line, 1), 1);
+    fontcolor(viewport, jill_getline(number, line, 1), 1);
     wprint(viewport, 0, y, 2, "                                    ");
     wprint(viewport, (viewport->vpxl - (int)strlen(line) * 6) / 2,
            y, 2, line);
@@ -613,7 +613,7 @@ void dotextmsg(int number)
         drawwin(&textwin);
         fontcolor(&textwin.inside, 7, 1);
         clearvp(&textwin.inside);
-        fontcolor(&textwin.border, getline(0, line, 0), -1);
+        fontcolor(&textwin.border, jill_getline(0, line, 0), -1);
         titlewin(&textwin, line);
         fontcolor(&textwin.inside, 7, 0);
 
@@ -699,7 +699,7 @@ void putlevelmsg(int number)
         linecount = numlines();
         y = (levelwin.inside.vpyl - 6 * (linecount - 1)) / 2;
         for (c = 0; c < linecount; ++c) {
-            fontcolor(&levelwin.inside, getline(c, line, 0), 1);
+            fontcolor(&levelwin.inside, jill_getline(c, line, 0), 1);
             wprint(&levelwin.inside,
                    (levelwin.inside.vpxl - 6 * (int)strlen(line)) / 2,
                    y, 2, line);
@@ -1314,7 +1314,7 @@ int domenu(const char *message, const char *key_table, int first_choice_line,
     setpagemode(1);
     timeout_clock = *myclock;
     for (line_number = numlines() - 1; line_number >= 0; --line_number) {
-        int color = getline(line_number, line, 0);
+        int color = jill_getline(line_number, line, 0);
         fontcolor(&menu.inside, color, -1);
         wprint(&menu.inside,
                4 + (line_number >= first_choice_line) * indent,

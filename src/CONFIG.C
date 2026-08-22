@@ -27,6 +27,7 @@ along with Jill of the Jungle Reconstructed.  If not, see <http://www.gnu.org/li
 #include "GAMECTRL.H"
 #include "GR.H"
 #include "HOSTSDL.H"
+#include "HOSTCOMPAT.H"
 #include "KEYBOARD.H"
 #include "MUSIC.H"
 
@@ -46,10 +47,22 @@ _Static_assert(sizeof(ConfigState) == 22, "configuration record must be 22 bytes
 void cfg_getpath(int argc, char **argv)
 {
     int index;
+
     for (index = 0; index < argc; ++index) {
-        _strupr(argv[index]);
-        if (argv[index][0] == '/' && argv[index][1] == 'P')
-            strcpy(cfg_path, argv[index] + 2);
+        const char *argument = argv[index];
+        const char *path = NULL;
+
+        if (_strnicmp(argument, "--data-path=", 12) == 0) {
+            path = argument + 12;
+        } else if (argument[0] == '/' &&
+                   toupper((unsigned char)argument[1]) == 'P') {
+            path = argument + 2;
+        }
+
+        if (path != NULL) {
+            strncpy(cfg_path, path, sizeof(cfg_path) - 1);
+            cfg_path[sizeof(cfg_path) - 1] = '\0';
+        }
     }
 }
 
@@ -58,27 +71,30 @@ void cfg_init(int argc, char **argv)
     int index;
 
     host_console_clear();
+
     fputs("\r\n\r\nDetecting your hardward...\r\n", stdout);
     fputs("\r\nIf your system locks, reboot and type:\r\n", stdout);
     fputs("   " JILL_PROGRAM_NAME " /NOSB  (No Sound Blaster card)\r\n", stdout);
     fputs("   " JILL_PROGRAM_NAME " /SB    (With a Sound Blaster)\r\n", stdout);
     fputs("   " JILL_PROGRAM_NAME " /NOSND (If all else fails)\r\n", stdout);
+
     readspeed();
+
     for (index = 0; index < argc; ++index) {
-        _strupr(argv[index]);
-        if (strcmp(argv[index], "/TEST") == 0) {
+        if (_stricmp(argv[index], "/TEST") == 0) {
             char string[16];
+
             _ltoa(systime, string, 10);
             fputs(string, stdout);
             getkey();
-        } else if (strcmp(argv[index], "/NOSB") == 0) {
+        } else if (_stricmp(argv[index], "/NOSB") == 0) {
             vocflag = musicflag = 0;
-        } else if (strcmp(argv[index], "/SB") == 0) {
+        } else if (_stricmp(argv[index], "/SB") == 0) {
             /* The original switch is accepted but makes no assignment. */
-        } else if (strcmp(argv[index], "/NOSND") == 0) {
+        } else if (_stricmp(argv[index], "/NOSND") == 0) {
             vocflag = musicflag = 0;
             nosnd = 1;
-        } else if (strcmp(argv[index], "/DEMO") == 0) {
+        } else if (_stricmp(argv[index], "/DEMO") == 0) {
             cfgdemo = 1;
         }
     }
@@ -225,7 +241,7 @@ int doconfig(void)
     cf.joyyc0 = joyyc;
     cf.joyyd0 = joyyd;
     cf.video_mode = x_ourmode;
-    vocflag = cf.vocflag0;
-    musicflag = cf.musicflag0;
+    vocflag = nosnd ? 0 : cf.vocflag0;
+    musicflag = nosnd ? 0 : cf.musicflag0;
     return 1;
 }
